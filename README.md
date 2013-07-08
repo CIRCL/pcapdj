@@ -22,3 +22,19 @@ processing. A third process, does some cleanup operations and controls pcapdj.
 Each pcap file that is processed by pcapdj must be authorized by a third process. When a pcap file is not acknowledged the file descriptor to the named pipe
 is not closed and hence the other program processing pcap data does not end and
 keeps its internal states.
+
+=Building PCAPDJ=
+==Dependencies==
+In an Ubuntu 12.04 Operating system the following packages must be installed.
+
+apt-get install libwiretap-dev libpcap-dev libhiredis-dev libglib2.0-dev
+
+
+==Compiling==
+
+unzip pcapdj-master.zip
+
+cd pcapdj-master
+
+make
+
