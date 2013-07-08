@@ -46,7 +46,7 @@ cd pcapdj-master
 
 make
 
-Use Case with Suricata
+Use case with Suricata
 ----------------------
 
 The Suricata IDS can be configured to extract all HTTP payloads [1].
