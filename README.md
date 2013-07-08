@@ -43,3 +43,29 @@ cd pcapdj-master
 
 make
 
+Use Case with Suricata
+======================
+
+The Suricata IDS can be configured to extract all HTTP payloads [1].
+This feature is used in the following example in conjunction with pcapdj
+feeding suricata with multiple pcap files.
+
+1. Import the pcap files that should be processed by pcapdj
+
+```python
+#!/usr/bin/python
+import redis
+import os
+root="mypcapfiledir"
+red = redis.Redis()
+files = os.listdir(root)
+files.sort()
+for rf in files:
+    f = root + "/"+rf
+    if f.endswith('pcap') == True:
+        red.rpush("PCAPDJ_IN_QUEUE",f)
+```
+
+References
+==========
+[1] http://blog.inliniac.net/2011/11/29/file-extraction-in-suricata/
