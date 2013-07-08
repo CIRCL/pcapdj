@@ -83,7 +83,9 @@ PCAPDJ waits for the consumer of the fifo bufer. In this case suricata.
 
 Launch suricata
 
+```
 suricata -r /tmp/pcapbuffer 
+```
 
 Until now no packets are put in the buffer because pcapdj needs an
 authorization. PCAPDJ says that it is ready to process the pcapfile 1.pcap
@@ -92,9 +94,10 @@ next file it wants to process in a queue called PCAPDJ_NEXT and it polls the
 key PCAPDJ_AUTH. The value of PCAPDJ_AUTH must correspond to the file pcapdj 
 put previously in the queue PCAPDJ_NEXT.
 
+```
 [INFO] Next file to process /tmp/testpcaps/1.pcap
 [INFO] Waiting authorization to process file /tmp/testpcaps/2.pcap
-
+```
 
 Launch the controler script that authorizes each pcap file that is put 
 in the named pipe.
