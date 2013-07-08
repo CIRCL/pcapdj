@@ -66,6 +66,52 @@ for rf in files:
         red.rpush("PCAPDJ_IN_QUEUE",f)
 ```
 
+2. Create a name pipe that is shared between pcapdj and suricta
+```
+mkfifo /tmp/pcapbuffer
+```
+
+3. Launch pcapdj
+```
+ ./pcapdj -b /tmp/pcapbuffer 
+redis_server = 127.0.0.1
+redis_port = 6379
+named pipe = /tmp/pcapbuffer
+Waiting for other peer (IDS, tcp-reassembly engine, etc)...
+
+```
+
+PCAPDJ waits for the consumer of the fifo bufer. In this case suricata.
+
+4. Launch suricata
+
+suricata -r /tmp/pcapbuffer 
+
+Until now no packets are put in the buffer because pcapdj needs an
+authorization. PCAPDJ says that it is ready to process the pcapfile 1.pcap
+and that it waits for this authorization.  For doing so, pcapdj puts the
+next file it wants to process in a queue called PCAPDJ_NEXT and it polls the
+key PCAPDJ_AUTH. The value of PCAPDJ_AUTH must correspond to the file pcapdj 
+put previously in the queue PCAPDJ_NEXT.
+
+```
+[INFO] Next file to process /tmp/testpcaps/1.pcap
+[INFO] Waiting authorization to process file /tmp/testpcaps/2.pcap
+```
+
+5. Launch the controler script that authorizes each pcap file that is put 
+in the named pipe.
+
+```python
+while True:
+    #Check if some data is ready to be process
+    pcapname = red.lpop("PCAPDJ_NEXT")
+    if pcapname != None:
+        print "Authorized file ",pcapname
+        red.set("PCAPDJ_AUTH", pcapname)
+```
+6. Wait until pcapdj and suricata are done
+
 References
 ==========
 [1] http://blog.inliniac.net/2011/11/29/file-extraction-in-suricata/
