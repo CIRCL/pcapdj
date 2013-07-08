@@ -19,9 +19,12 @@ PCAPDJ processes a list of pcap files and write each individual packet in a
 named pipe. A second process reads these individual packets and does some
 processing. A third process, does some cleanup operations and controls pcapdj. 
 
-Each pcap file that is processed by pcapdj must be authorized by a third process. When a pcap file is not acknowledged the file descriptor to the named pipe
+Each pcap file that is processed by pcapdj must be authorized by a third process. 
+When a pcap file is not acknowledged the file descriptor to the named pipe
 is not closed and hence the other program processing pcap data does not end and
-keeps its internal states.
+keeps its internal states. Before a next file is authorized, other tasks could be done, 
+such as removing duplicated files or already processed pcap files in order to free disk space. 
+
 
 Building PCAPDJ
 ===============
