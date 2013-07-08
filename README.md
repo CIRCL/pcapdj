@@ -27,7 +27,7 @@ Building PCAPDJ
 ===============
 
 Dependencies
-============
+------------
 
 
 In an Ubuntu 12.04 Operating system the following packages must be installed.
@@ -35,7 +35,7 @@ In an Ubuntu 12.04 Operating system the following packages must be installed.
 apt-get install libwiretap-dev libpcap-dev libhiredis-dev libglib2.0-dev
 
 Compiling
-=========
+---------
 
 unzip pcapdj-master.zip
 
@@ -44,7 +44,7 @@ cd pcapdj-master
 make
 
 Use Case with Suricata
-======================
+----------------------
 
 The Suricata IDS can be configured to extract all HTTP payloads [1].
 This feature is used in the following example in conjunction with pcapdj
