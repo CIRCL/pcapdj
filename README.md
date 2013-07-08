@@ -50,7 +50,7 @@ The Suricata IDS can be configured to extract all HTTP payloads [1].
 This feature is used in the following example in conjunction with pcapdj
 feeding suricata with multiple pcap files.
 
-1. Import the pcap files that should be processed by pcapdj
+Import the pcap files that should be processed by pcapdj
 
 ```python
 #!/usr/bin/python
@@ -66,12 +66,12 @@ for rf in files:
         red.rpush("PCAPDJ_IN_QUEUE",f)
 ```
 
-2. Create a name pipe that is shared between pcapdj and suricta
+Create a name pipe that is shared between pcapdj and suricta
 ```
 mkfifo /tmp/pcapbuffer
 ```
 
-3. Launch pcapdj
+Launch pcapdj
 ```
  ./pcapdj -b /tmp/pcapbuffer 
 redis_server = 127.0.0.1
@@ -81,7 +81,7 @@ Waiting for other peer (IDS, tcp-reassembly engine, etc)...
 PCAPDJ waits for the consumer of the fifo bufer. In this case suricata.
 ```
 
-4. Launch suricata
+Launch suricata
 
 suricata -r /tmp/pcapbuffer 
 
@@ -96,7 +96,7 @@ put previously in the queue PCAPDJ_NEXT.
 [INFO] Waiting authorization to process file /tmp/testpcaps/2.pcap
 
 
-5. Launch the controler script that authorizes each pcap file that is put 
+Launch the controler script that authorizes each pcap file that is put 
 in the named pipe.
 
 ```python
@@ -108,7 +108,7 @@ while True:
         red.set("PCAPDJ_AUTH", pcapname)
 ```
 
-6. Wait until pcapdj and suricata are done
+Wait until pcapdj and suricata are done
 
 References
 ==========
