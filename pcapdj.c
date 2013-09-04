@@ -240,7 +240,7 @@ int main(int argc, char* argv[])
             if (r == EXIT_FAILURE) {
                 fprintf(stderr,"Something went wrong in during processing");
             }else{
-                fprintf(stderr,"All went fine\n");
+                fprintf(stderr,"[INFO] All went fine. No files in the pipe to process.\n");
             }
             /* In all case close the connection */
             pcap_dump_close(dumper);
