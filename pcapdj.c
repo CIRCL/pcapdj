@@ -241,9 +241,9 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE; 
     }
 
-    printf("redis_server = %s\n",redis_server);
-    printf("redis_port = %d\n",redis_srv_port);
-    printf("named pipe = %s\n", namedpipe);
+    fprintf(stderr, "[INFO] redis_server = %s\n",redis_server);
+    fprintf(stderr, "[INFO] redis_port = %d\n",redis_srv_port);
+    fprintf(stderr, "[INFO] named pipe = %s\n", namedpipe);
 
     /* Open the pcap named pipe */
     pcap = pcap_open_dead(DLT_EN10MB, 65535);
