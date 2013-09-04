@@ -108,7 +108,7 @@ void wait_auth_to_proceed(redisContext* ctx, char* filename)
                  */
                 delete_auth_file(ctx);
                 if (!strncmp(reply->str, filename, strlen(filename))) {
-                    fprintf(stderr, "Got authorization to proceed\n");
+                    fprintf(stderr, "[INFO] Got authorization to proceed\n");
                     freeReplyObject(reply);
                     return;
                 }else{
@@ -117,7 +117,7 @@ void wait_auth_to_proceed(redisContext* ctx, char* filename)
             }       
             freeReplyObject(reply);
         }else{
-            fprintf(stderr,"redis server did not replied for the authorization\n");
+            fprintf(stderr,"[ERROR] redis server did not replied for the authorization\n");
         }
         usleep(POLLINT);
     } while (1);
@@ -167,7 +167,7 @@ int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv
     ctx = redisConnect(redis_server, redis_srv_port);
 
     if (ctx != NULL && ctx->err) {
-        fprintf(stderr,"Could not connect to redis. %s.\n", ctx->errstr);
+        fprintf(stderr,"[ERROR] Could not connect to redis. %s.\n", ctx->errstr);
         return EXIT_FAILURE;
     }
     
@@ -175,7 +175,7 @@ int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv
     do {
         reply = redisCommand(ctx,"LPOP %s", PQUEUE); 
         if (!reply){
-            fprintf(stderr,"Redis error %s\n",ctx->errstr);
+            fprintf(stderr,"[ERROR] Redis error %s\n",ctx->errstr);
             return EXIT_FAILURE;
         }
         /* We got a reply */
@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
                 usage();
                 return EXIT_SUCCESS;
             default: /* '?' */
-                fprintf(stderr, "Invalid command line was specified\n");
+                fprintf(stderr, "[ERROR] Invalid command line was specified\n");
         }
     }
     /* Set default values if needed */
@@ -237,7 +237,7 @@ int main(int argc, char* argv[])
         strncpy(redis_server,DEFAULT_SRV,64);
     /* Connect to redis */
     if (!namedpipe[0]){
-        fprintf(stderr,"A named pipe must be specified\n");
+        fprintf(stderr,"[ERROR] A named pipe must be specified\n");
         return EXIT_FAILURE; 
     }
 
@@ -248,12 +248,12 @@ int main(int argc, char* argv[])
     /* Open the pcap named pipe */
     pcap = pcap_open_dead(DLT_EN10MB, 65535);
     if (pcap) {
-        printf("Waiting for other peer (IDS, tcp-reassembly engine, etc)...\n");
+        printf("[INFO] Waiting for other peer (IDS, tcp-reassembly engine, etc)...\n");
         dumper = pcap_dump_open(pcap, namedpipe);
         if (dumper) {
             r = process_input_queue(dumper, redis_server, redis_srv_port);
             if (r == EXIT_FAILURE) {
-                fprintf(stderr,"Something went wrong in during processing");
+                fprintf(stderr,"[ERROR] Something went wrong in during processing");
             }else{
                 fprintf(stderr,"[INFO] All went fine. No files in the pipe to process.\n");
             }
@@ -261,11 +261,11 @@ int main(int argc, char* argv[])
             pcap_dump_close(dumper);
             return r;
         }else {
-            fprintf(stderr,"pcap dumper failed\n");
+            fprintf(stderr,"[ERROR] pcap dumper failed\n");
         }
         pcap_close(pcap);
     }else {
-        fprintf(stderr, "pcap_open_dead failed\n");
+        fprintf(stderr, "[ERROR] pcap_open_dead failed\n");
     }
     return EXIT_FAILURE;
 }
