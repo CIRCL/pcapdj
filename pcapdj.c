@@ -83,6 +83,16 @@ void delete_next_file_queue(redisContext* ctx)
         freeReplyObject(reply);
 }
 
+
+void delete_auth_file(redisContext* ctx)
+{
+    /* FIXME errors are ignored */
+    redisReply * reply;
+    reply = redisCommand(ctx, "DEL %s", AKEY);
+    if (reply)
+        freeReplyObject(reply);
+}
+
 void wait_auth_to_proceed(redisContext* ctx, char* filename)
 {
     redisReply *reply;
@@ -92,12 +102,17 @@ void wait_auth_to_proceed(redisContext* ctx, char* filename)
         reply = redisCommand(ctx,"GET %s",AKEY);
         if (reply){
             if (reply->type == REDIS_REPLY_STRING) {
+                /* Delete the authorized key. So in the next
+                 * iteration the AUTH_KEY is not there anymore and
+                 * the error message is not reated all the times
+                 */
+                delete_auth_file(ctx);
                 if (!strncmp(reply->str, filename, strlen(filename))) {
                     fprintf(stderr, "Got authorization to proceed\n");
                     freeReplyObject(reply);
                     return;
                 }else{
-                    //fprintf(stderr,"Got the wrong authorization. Waited for (%s). Got %s.\n", filename, reply->str);
+                    fprintf(stderr,"[ERROR] Got the wrong authorization. Waited for (%s). Got %s.\n", filename, reply->str);
                 }
             }       
             freeReplyObject(reply);
