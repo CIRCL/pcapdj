@@ -136,12 +136,12 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
             pcap_dump((u_char*)dumper, &pchdr, buf);
         }
         update_processed_queue(ctx, filename);
+        wtap_close(wth);
 	fprintf(stderr,"[INFO] Processing of filename %s done\n",filename);
     }else{
         fprintf(stderr, "[ERROR] Could not open filename %s,cause=%s",filename,
                 wtap_strerror(err));
     }
-    wtap_close(wth);
 }
 
 int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv_port)
