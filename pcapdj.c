@@ -108,7 +108,7 @@ void wait_auth_to_proceed(redisContext* ctx, char* filename)
                  */
                 delete_auth_file(ctx);
                 if (!strncmp(reply->str, filename, strlen(filename))) {
-                    fprintf(stderr, "[INFO] Got authorization to proceed\n");
+                    fprintf(stderr, "[INFO] Got authorization to process %s\n",filename);
                     freeReplyObject(reply);
                     return;
                 }else{
