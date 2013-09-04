@@ -139,7 +139,7 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
         wtap_close(wth);
 	fprintf(stderr,"[INFO] Processing of filename %s done\n",filename);
     }else{
-        fprintf(stderr, "[ERROR] Could not open filename %s,cause=%s",filename,
+        fprintf(stderr, "[ERROR] Could not open filename %s,cause=%s\n",filename,
                 wtap_strerror(err));
     }
 }
