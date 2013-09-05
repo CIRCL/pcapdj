@@ -26,6 +26,7 @@
 #include <pcap/pcap.h>
 #include <wtap.h>
 #include <unistd.h>
+#include <signal.h>
 #define PQUEUE "PCAPDJ_IN_QUEUE"
 #define RQUEUE "PCAPDJ_PROCESSED"
 #define NEXTJOB "PCAPDJ_NEXT"
@@ -36,6 +37,10 @@
 #define PCAPDJ_STATE_DONE "DONE"
 
 #include <hiredis/hiredis.h>
+
+
+/* Global variables */
+sig_atomic_t sigusr1_suspend = 0;
 
 void usage(void)
 {
@@ -55,6 +60,30 @@ void usage(void)
     printf("the next pcap file and feed the fifo buffer with the packets.\n");
     printf("\nWhen the last packet of the last file has been processed the fifo\n");
     printf("the file handle  is closed.\n"); 
+}
+
+void suspend_pcapdj_if_needed(const char *state) 
+{
+    if (sigusr1_suspend) {
+        fprintf(stderr,"[INFO] pcapdj is suspended. %s\n",state);
+        while (sigusr1_suspend) { 
+                usleep(POLLINT);
+        }
+    }
+}
+
+void sig_handler(int signal_number)
+{
+    if (signal_number == SIGUSR1) {
+        sigusr1_suspend=~sigusr1_suspend;
+
+        if (sigusr1_suspend) {
+            printf("[INFO] Suspending pcapdj\n");
+            /* This function should not block otherwise the resume does not work */
+        }else{
+            printf("[INFO] Resuming pcapdj\n");
+        }
+    }
 }
 
 void update_processed_queue(redisContext* ctx, char *filename)
@@ -141,6 +170,7 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
     if (wth) {
         /* Loop over the packets and adjust the headers */
         while (wtap_read(wth, &err, &errinfo, &data_offset)) {
+            suspend_pcapdj_if_needed("Stop feeding buffer.");
             phdr = wtap_phdr(wth);
             buf = wtap_buf_ptr(wth);
             pchdr.caplen = phdr->caplen;
@@ -207,9 +237,17 @@ int main(int argc, char* argv[])
     char *namedpipe;
     pcap_t *pcap;
     pcap_dumper_t *dumper;
+    struct sigaction sa;
+    
     namedpipe = calloc(128,1);
     assert(namedpipe);  
     
+    /* Install signal handler */
+    sigusr1_suspend = 0;
+    memset(&sa,0,sizeof(sa));
+    sa.sa_handler = &sig_handler;
+    sigaction(SIGUSR1, &sa, NULL);
+
     redis_server = calloc(64,1);
     assert(redis_server);
 
@@ -244,6 +282,7 @@ int main(int argc, char* argv[])
     fprintf(stderr, "[INFO] redis_server = %s\n",redis_server);
     fprintf(stderr, "[INFO] redis_port = %d\n",redis_srv_port);
     fprintf(stderr, "[INFO] named pipe = %s\n", namedpipe);
+    fprintf(stderr, "[INFO] pid = %d\n",(int)getpid());
 
     /* Open the pcap named pipe */
     pcap = pcap_open_dead(DLT_EN10MB, 65535);
