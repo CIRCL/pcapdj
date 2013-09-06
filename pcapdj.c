@@ -36,11 +36,29 @@
 #define PCAPDJ_STATE "PCAPDJ_STATE"
 #define PCAPDJ_STATE_DONE "DONE"
 
+/* Internal pcapdj states */
+#define PCAPDJ_I_STATE_RUN 0
+#define PCAPDJ_I_STATE_SUSPEND 1
+#define PCAPDJ_I_STATE_AUTH_WAIT 2
+#define PCAPDJ_I_STATE_FEED 3 
 #include <hiredis/hiredis.h>
 
+/* FIXME No atomicity is assured so it might be that they are not accurate */
+typedef struct statistics_s {
+    u_int64_t num_files;
+    u_int64_t num_packets;
+    u_int64_t sum_cap_lengths;
+    u_int64_t sum_lengths;
+    u_int64_t num_suspend;
+    u_int8_t state;
+    u_int8_t oldstate;
+    time_t startepoch;
+    struct tm *starttime;
+} statistics_t;
 
 /* Global variables */
 sig_atomic_t sigusr1_suspend = 0;
+statistics_t stats;
 
 void usage(void)
 {
@@ -72,6 +90,42 @@ void suspend_pcapdj_if_needed(const char *state)
     }
 }
 
+void display_stats()
+{
+    char stimebuf[64];
+    u_int64_t uptime;
+    time_t t;
+    /* Display accounting numbers */
+    if (strftime((char*)&stimebuf, 64, "%Y-%d-%m %H:%M:%S",stats.starttime))
+        printf("[STATS] Start time:%s\n",stimebuf);
+    t = time(NULL);
+    uptime = t - stats.startepoch;
+    printf("[STATS] Uptime:%ld (seconds)\n", uptime);
+
+    /* Describe the internal state */
+    switch (stats.state) {
+        case PCAPDJ_I_STATE_RUN:
+            printf("[STATS] Internal state:Running\n");
+            break;
+        case PCAPDJ_I_STATE_SUSPEND:
+            printf("[STATS] Internal state:Suspended\n");
+            break;
+        case PCAPDJ_I_STATE_AUTH_WAIT:
+            printf("[STATS] Internal state:Waiting for authorization\n");
+            break;
+        case PCAPDJ_I_STATE_FEED:
+            printf("[STATS] Internal state:Feeding fifo buffer\n");
+            break;
+        default:
+            printf("[STATS] Internal state:Unknown\n");        
+    }
+    printf("[STATS] Number of suspensions:%ld\n",stats.num_suspend);
+    printf("[STATS] Number of files:%ld\n",stats.num_files);
+    printf("[STATS] Number of packets:%ld\n",stats.num_packets);
+    printf("[STATS] Number of cap_lengths:%ld\n",stats.sum_cap_lengths);
+    printf("[STATS] Number of lengths:%ld\n",stats.sum_lengths);
+}
+
 void sig_handler(int signal_number)
 {
     if (signal_number == SIGUSR1) {
@@ -79,10 +133,18 @@ void sig_handler(int signal_number)
 
         if (sigusr1_suspend) {
             printf("[INFO] Suspending pcapdj\n");
+            stats.oldstate = stats.state;
+            stats.state = PCAPDJ_I_STATE_SUSPEND;
+            stats.num_suspend++;
             /* This function should not block otherwise the resume does not work */
         }else{
             printf("[INFO] Resuming pcapdj\n");
+            stats.state = stats.oldstate;
+            stats.oldstate = PCAPDJ_I_STATE_SUSPEND;
         }
+    }
+    if (signal_number == SIGUSR2) {
+        display_stats();
     }
 }
 
@@ -125,6 +187,7 @@ void delete_auth_file(redisContext* ctx)
 void wait_auth_to_proceed(redisContext* ctx, char* filename)
 {
     redisReply *reply;
+    stats.state = PCAPDJ_I_STATE_AUTH_WAIT;
     /* If there is an error the program waits forever */
     
     do {
@@ -168,9 +231,11 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
     wait_auth_to_proceed(ctx, filename);
     wth = wtap_open_offline ( filename, (int*)&err, (char**)&errinfo, FALSE);
     if (wth) {
+        stats.num_files++;
         /* Loop over the packets and adjust the headers */
         while (wtap_read(wth, &err, &errinfo, &data_offset)) {
             suspend_pcapdj_if_needed("Stop feeding buffer.");
+            stats.state = PCAPDJ_I_STATE_FEED;
             phdr = wtap_phdr(wth);
             buf = wtap_buf_ptr(wth);
             pchdr.caplen = phdr->caplen;
@@ -179,6 +244,9 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
             /* Need to convert micro to nano seconds */
             pchdr.ts.tv_usec = phdr->ts.nsecs/1000;
             pcap_dump((u_char*)dumper, &pchdr, buf);
+            stats.num_packets++;
+            stats.sum_cap_lengths+=phdr->caplen;
+            stats.sum_lengths+=phdr->caplen;
         }
         update_processed_queue(ctx, filename);
         wtap_close(wth);
@@ -227,6 +295,26 @@ int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv
     return EXIT_SUCCESS;
 }
  
+
+void init(void)
+{
+    struct sigaction sa;
+    
+    sigusr1_suspend = 0;
+    memset(&sa,0,sizeof(sa));
+    memset(&stats,0,sizeof(statistics_t));
+    
+    /* Update the start time */
+    stats.startepoch = time(NULL);
+    stats.starttime = localtime(&stats.startepoch);
+    assert(stats.starttime);
+
+    /* Install signal handler */
+    sa.sa_handler = &sig_handler;
+    sigaction(SIGUSR1, &sa, NULL);
+    sigaction(SIGUSR2, &sa, NULL);
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -237,17 +325,12 @@ int main(int argc, char* argv[])
     char *namedpipe;
     pcap_t *pcap;
     pcap_dumper_t *dumper;
-    struct sigaction sa;
+    
+    init();
     
     namedpipe = calloc(128,1);
     assert(namedpipe);  
     
-    /* Install signal handler */
-    sigusr1_suspend = 0;
-    memset(&sa,0,sizeof(sa));
-    sa.sa_handler = &sig_handler;
-    sigaction(SIGUSR1, &sa, NULL);
-
     redis_server = calloc(64,1);
     assert(redis_server);
 
