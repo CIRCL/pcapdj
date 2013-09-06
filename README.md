@@ -140,18 +140,19 @@ When PCAPDJ is running for a while, it might be interesting to determine
 what is happening. The signal SIGUSR2 can be sent to PCAPDJ. PCAPDJ 
 shows then following information on standard output.
 
-- [ ] A timestamp when PCAPDJ started 
-- [ ] The number of seconds elapsed since PCAPDJ started
-- [ ] The internal state of PCAPDJ
-- [ ] The number of times PCAPDJ has been suspended
-- [ ] The number of files PCAPDJ processed
-- [ ] The number of packets PCAPDJ processed
-- [ ] The sum of the cap length fields
-- [ ] The sum of the length fields. If the sum of lengths is different from
-      the sum of cap lengths then the capture is incomplete. 
+-  A timestamp when PCAPDJ started 
+-  The number of seconds elapsed since PCAPDJ started
+-  The internal state of PCAPDJ
+-  The number of times PCAPDJ has been suspended
+-  The number of files PCAPDJ processed
+-  The number of packets PCAPDJ processed
+-  The sum of the cap length fields
+-  The sum of the length fields. If the sum of lengths is different from
+   the sum of cap lengths then the capture is incomplete. 
  
 An example is shown below:
 
+```
 [STATS] Start time:2013-06-09 09:17:50
 [STATS] Uptime:322 (seconds)
 [STATS] Internal state:Waiting for authorization
@@ -160,7 +161,7 @@ An example is shown below:
 [STATS] Number of packets:2968
 [STATS] Number of cap_lengths:330581
 [STATS] Number of lengths:330581
-
+```
 References
 ==========
 [1] http://blog.inliniac.net/2011/11/29/file-extraction-in-suricata/
