@@ -42,7 +42,9 @@
 #define PCAPDJ_I_STATE_AUTH_WAIT 2
 #define PCAPDJ_I_STATE_FEED 3 
 #include <hiredis/hiredis.h>
+#include <linux/limits.h>
 
+#define ABSFILEMAX PATH_MAX+NAME_MAX+1
 /* FIXME No atomicity is assured so it might be that they are not accurate */
 typedef struct statistics_s {
     u_int64_t num_files;
@@ -54,6 +56,7 @@ typedef struct statistics_s {
     u_int8_t oldstate;
     time_t startepoch;
     struct tm *starttime;
+    char lastprocessedfile[ABSFILEMAX]; 
 } statistics_t;
 
 /* Global variables */
@@ -124,6 +127,7 @@ void display_stats()
     printf("[STATS] Number of packets:%ld\n",stats.num_packets);
     printf("[STATS] Number of cap_lengths:%ld\n",stats.sum_cap_lengths);
     printf("[STATS] Number of lengths:%ld\n",stats.sum_lengths);
+    printf("[INFO] Last processed file:%s\n",stats.lastprocessedfile);
 }
 
 void sig_handler(int signal_number)
@@ -229,6 +233,8 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
     update_next_file(ctx, filename);
     fprintf(stderr,"[INFO] Waiting authorization to process file %s\n",filename);
     wait_auth_to_proceed(ctx, filename);
+    
+    strncpy((char*)&stats.lastprocessedfile, filename, ABSFILEMAX);
     wth = wtap_open_offline ( filename, (int*)&err, (char**)&errinfo, FALSE);
     if (wth) {
         stats.num_files++;
