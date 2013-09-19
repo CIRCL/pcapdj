@@ -116,8 +116,8 @@ while True:
 
 Wait until pcapdj and suricata are done
 
-Experimental features
-=====================
+Additional Features
+===================
 
 On the experimental branch two new features were implemented based on 
 a signal handler.
