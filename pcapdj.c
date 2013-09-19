@@ -63,11 +63,12 @@ typedef struct statistics_s {
 /* Global variables */
 sig_atomic_t sigusr1_suspend = 0;
 statistics_t stats;
+char statedir[ABSFILEMAX];
 
 void usage(void)
 {
     
-    printf("pcapdj [-h] -b namedpipe [-s redis_server] -p [redis_srv_port]\n\n");
+    printf("pcapdj [-h] -b namedpipe [-s redis_server] -p [redis_srv_port] [-d statedir]\n\n");
     printf("Connects to the redis instance specified with by the redis_server\n");
     printf("and redis_srv_port.\n\n"); 
 
@@ -82,6 +83,9 @@ void usage(void)
     printf("the next pcap file and feed the fifo buffer with the packets.\n");
     printf("\nWhen the last packet of the last file has been processed the fifo\n");
     printf("the file handle  is closed.\n"); 
+
+    printf("\nOPTIONS\n");
+    printf("    -d <statedir> Specify the state directory to store internal states\n");
 }
 
 void suspend_pcapdj_if_needed(const char *state) 
@@ -319,6 +323,8 @@ void init(void)
     stats.startepoch = time(NULL);
     stats.starttime = localtime(&stats.startepoch);
     assert(stats.starttime);
+    
+    bzero((char*)&statedir, ABSFILEMAX);
 
     /* Install signal handler */
     sa.sa_handler = &sig_handler;
@@ -346,7 +352,7 @@ int main(int argc, char* argv[])
     assert(redis_server);
 
     redis_srv_port = 6379;        
-    while ((opt = getopt(argc, argv, "b:hs:p:")) != -1) {
+    while ((opt = getopt(argc, argv, "b:hs:p:d:")) != -1) {
         switch (opt) {
             case 's':
                 strncpy(redis_server,optarg,64);
@@ -356,6 +362,9 @@ int main(int argc, char* argv[])
                 break;
             case 'b':
                 strncpy(namedpipe , optarg, 128);
+                break;
+            case 'd':
+                strncpy((char*)&statedir, optarg, ABSFILEMAX);
                 break;
             case 'h':
                 usage();
@@ -377,7 +386,7 @@ int main(int argc, char* argv[])
     fprintf(stderr, "[INFO] redis_port = %d\n",redis_srv_port);
     fprintf(stderr, "[INFO] named pipe = %s\n", namedpipe);
     fprintf(stderr, "[INFO] pid = %d\n",(int)getpid());
-
+    fprintf(stderr, "[INFO] used state directory:%s\n", statedir);
     /* Open the pcap named pipe */
     pcap = pcap_open_dead(DLT_EN10MB, 65535);
     if (pcap) {
