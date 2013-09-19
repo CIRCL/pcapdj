@@ -51,6 +51,7 @@ typedef struct statistics_s {
     u_int64_t num_packets;
     u_int64_t sum_cap_lengths;
     u_int64_t sum_lengths;
+    u_int64_t infile_cnt;
     u_int64_t num_suspend;
     u_int8_t state;
     u_int8_t oldstate;
@@ -128,6 +129,7 @@ void display_stats()
     printf("[STATS] Number of cap_lengths:%ld\n",stats.sum_cap_lengths);
     printf("[STATS] Number of lengths:%ld\n",stats.sum_lengths);
     printf("[INFO] Last processed file:%s\n",stats.lastprocessedfile);
+    printf("[INFO] Packet offset:%ld\n",stats.infile_cnt);
 }
 
 void sig_handler(int signal_number)
@@ -235,6 +237,8 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
     wait_auth_to_proceed(ctx, filename);
     
     strncpy((char*)&stats.lastprocessedfile, filename, ABSFILEMAX);
+    stats.infile_cnt=0;
+
     wth = wtap_open_offline ( filename, (int*)&err, (char**)&errinfo, FALSE);
     if (wth) {
         stats.num_files++;
@@ -253,6 +257,7 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
             stats.num_packets++;
             stats.sum_cap_lengths+=phdr->caplen;
             stats.sum_lengths+=phdr->caplen;
+            stats.infile_cnt++;
         }
         update_processed_queue(ctx, filename);
         wtap_close(wth);
