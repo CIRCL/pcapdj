@@ -1,0 +1,8 @@
+Some points that could be done on pcapdj ...
+
+* read saved states and respect them during bootstrap
+* add command line feature to reset all PCAPDJ keys in redis
+* write easy to use importer program
+* Use autoconf to build pcap dj
+* write man page
+* do more extensive tests -> (copy pcap data via pcap dj and compare etc)
