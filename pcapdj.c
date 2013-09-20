@@ -27,6 +27,7 @@
 #include <wtap.h>
 #include <unistd.h>
 #include <signal.h>
+#include <errno.h>
 #define PQUEUE "PCAPDJ_IN_QUEUE"
 #define RQUEUE "PCAPDJ_PROCESSED"
 #define NEXTJOB "PCAPDJ_NEXT"
@@ -377,11 +378,62 @@ char *create_target_filename(void)
     return filename;
 }
 
-void save_internal_states()
+int save_internal_states()
 {
     char * filename;
+    FILE *fd;
+    char stimebuf[16];
+    time_t t;
+    int uptime;
     filename = create_target_filename();
-    printf("%s\n",filename);
+    if (!filename)
+        return 0;
+    fd = fopen(filename,"w");
+    if (fd) { 
+        fprintf(fd,"[PCAPDJ_STATES]\n");
+        fprintf(fd,"lastprocessedfile=%s",stats.lastprocessedfile);
+        fprintf(fd,"offset:%ld\n",stats.infile_cnt);
+        fprintf(fd, "[STATS]\n");
+        if (strftime((char*)&stimebuf, 64, "%Y-%d-%m %H:%M:%S",
+            stats.starttime)){
+            fprintf(fd,"starttime=%s\n",stimebuf);
+        } 
+        t = time(NULL);
+        uptime = t - stats.startepoch;
+        fprintf(fd,"uptime=%d\n", uptime);
+
+        /* Store the internal state */
+        switch (stats.state) {
+            case PCAPDJ_I_STATE_RUN:
+                fprintf(fd,"state=run\n");
+                break;
+        case PCAPDJ_I_STATE_SUSPEND:
+            fprintf(fd,"state=suspend\n");
+            break;
+        case PCAPDJ_I_STATE_AUTH_WAIT:
+            fprintf(fd,"internal_state=wait\n");
+            break;
+        case PCAPDJ_I_STATE_FEED:
+            fprintf(fd,"state=feeding\n");
+            break;
+        default:
+            fprintf(fd,"state=unknown\n");        
+        }
+        fprintf(fd,"num_suspend:%ld\n",stats.num_suspend);
+        fprintf(fd,"num_files:%ld\n",stats.num_files);
+        fprintf(fd,"num_packets:%ld\n",stats.num_packets);
+        fprintf(fd,"num_cap_lengths:%ld\n",stats.sum_cap_lengths);
+        fprintf(fd,"num_lengths:%ld\n",stats.sum_lengths);
+        fclose(fd);
+        free(filename);
+        return 1;
+    } else{
+        fprintf(stderr,"[ERROR] cannot open filename %s.%s\n", 
+        filename, strerror(errno));
+    }
+    /* An error happened */
+    free(filename);
+    return 0;
 }
 
 int main(int argc, char* argv[])
