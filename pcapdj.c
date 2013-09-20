@@ -433,6 +433,7 @@ int save_internal_states()
         fprintf(fd,"num_packets:%ld\n",stats.num_packets);
         fprintf(fd,"num_cap_lengths:%ld\n",stats.sum_cap_lengths);
         fprintf(fd,"num_lengths:%ld\n",stats.sum_lengths);
+        fprintf(stderr, "[INFO] Saved internal states to %s\n",filename);
         fclose(fd);
         free(filename);
         return 1;
@@ -441,6 +442,7 @@ int save_internal_states()
         filename, strerror(errno));
     }
     /* An error happened */
+    fprintf(stderr,"[ERROR] The file %s might be corrupted\n",filename);
     free(filename);
     return 0;
 }
