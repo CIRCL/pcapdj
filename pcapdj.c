@@ -398,7 +398,7 @@ int save_internal_states()
     fd = fopen(filename,"w");
     if (fd) { 
         fprintf(fd,"[PCAPDJ_STATES]\n");
-        fprintf(fd,"lastprocessedfile=%s",stats.lastprocessedfile);
+        fprintf(fd,"lastprocessedfile=%s\n",stats.lastprocessedfile);
         fprintf(fd,"offset:%ld\n",stats.infile_cnt);
         fprintf(fd, "[STATS]\n");
         if (strftime((char*)&stimebuf, 64, "%Y-%d-%m %H:%M:%S",
