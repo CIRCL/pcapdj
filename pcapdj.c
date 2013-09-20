@@ -332,6 +332,58 @@ void init(void)
     sigaction(SIGUSR2, &sa, NULL);
 }
 
+/* The file is composed of the following format
+ * statedir/pcapdj_states_YYYYmmDDHHMM.ini
+ * where YYYY is the year expressed in 4 digits
+ * mm is the month expressed in 2 digits
+ * DD is the day
+ * HH is the hour
+ * MM is the miniute
+ * SS is the second
+ * This timestamp is the date when the dump was done
+ * NULL is retuned on errors
+ */
+char *create_target_filename(void)
+{
+    time_t t;
+    struct tm *tm;
+    char buf[16];
+    char *filename;
+   
+    filename = calloc(ABSFILEMAX,1);
+    if (!filename) { 
+        fprintf(stderr,"[ERROR] No memory to save internal states\n");
+        return NULL;
+    }
+
+    t = time(NULL);
+    tm = localtime(&t);
+
+    if (tm) {
+         if (strftime((char*)&buf, 16, "%Y%m%d%H%M%S", tm)) {
+            if (statedir[0]) {
+                snprintf(filename, ABSFILEMAX, "%s/%s.txt",statedir, buf);
+            }else{
+                snprintf(filename, ABSFILEMAX, "%s.txt", buf);
+            }
+        } else{
+            fprintf(stderr, "[ERROR] Strftime failed\n");    
+            return NULL;
+        }
+    }else{
+        fprintf(stderr, "[ERROR] localtime failed\n");
+        return NULL;
+    }
+    return filename;
+}
+
+void save_internal_states()
+{
+    char * filename;
+    filename = create_target_filename();
+    printf("%s\n",filename);
+}
+
 int main(int argc, char* argv[])
 {
 
