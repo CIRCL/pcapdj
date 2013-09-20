@@ -66,6 +66,8 @@ sig_atomic_t sigusr1_suspend = 0;
 statistics_t stats;
 char statedir[ABSFILEMAX];
 
+int save_internal_states();
+
 void usage(void)
 {
     
@@ -156,6 +158,10 @@ void sig_handler(int signal_number)
     }
     if (signal_number == SIGUSR2) {
         display_stats();
+    }
+    if (signal_number == SIGTERM) {
+        printf("[INFO] Got TERM signal\n");
+        save_internal_states();
     }
 }
 
@@ -331,6 +337,7 @@ void init(void)
     sa.sa_handler = &sig_handler;
     sigaction(SIGUSR1, &sa, NULL);
     sigaction(SIGUSR2, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
 }
 
 /* The file is composed of the following format
