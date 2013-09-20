@@ -162,6 +162,8 @@ void sig_handler(int signal_number)
     if (signal_number == SIGTERM) {
         printf("[INFO] Got TERM signal\n");
         save_internal_states();
+        printf("[INFO] Terminating program\n");
+        exit(1);
     }
 }
 
