@@ -159,8 +159,8 @@ void sig_handler(int signal_number)
     if (signal_number == SIGUSR2) {
         display_stats();
     }
-    if (signal_number == SIGTERM) {
-        printf("[INFO] Got TERM signal\n");
+    if (signal_number == SIGTERM || signal_number == SIGINT) {
+        printf("[INFO] Got TERM or INT signal\n");
         save_internal_states();
         printf("[INFO] Terminating program\n");
         exit(1);
@@ -340,6 +340,7 @@ void init(void)
     sigaction(SIGUSR1, &sa, NULL);
     sigaction(SIGUSR2, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
+    sigaction(SIGINT, &sa, NULL);
 }
 
 /* The file is composed of the following format
