@@ -370,9 +370,9 @@ char *create_target_filename(void)
     if (tm) {
          if (strftime((char*)&buf, 16, "%Y%m%d%H%M%S", tm)) {
             if (statedir[0]) {
-                snprintf(filename, ABSFILEMAX, "%s/%s.txt",statedir, buf);
+                snprintf(filename, ABSFILEMAX, "%s/pcapdj_%s.txt",statedir, buf);
             }else{
-                snprintf(filename, ABSFILEMAX, "%s.txt", buf);
+                snprintf(filename, ABSFILEMAX, "pcapdj_%s.txt", buf);
             }
         } else{
             fprintf(stderr, "[ERROR] Strftime failed\n");    
