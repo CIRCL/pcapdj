@@ -578,6 +578,8 @@ int handle_old_state_files(void)
             p=p->next;
         }
     }
+    fpair = (filenamepair_t*)sfilelist->data;
+    printf("[INFO] Selecting most recent state file %s\n",fpair->filename);
     return 0;
 }
 
