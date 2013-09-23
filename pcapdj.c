@@ -564,6 +564,39 @@ GList *search_old_state_files(void)
     return dirlist;
 }
 
+int load_state_file(char* filename)
+{
+    GKeyFile *gf;
+    GError *err;
+    char *afilename;
+    int ret;
+
+    ret = 0;
+    gf = g_key_file_new();
+    afilename = calloc(ABSFILEMAX, 1);
+    
+    assert(afilename);
+    assert(gf);
+
+    if (statedir[0]) {
+        snprintf(afilename, ABSFILEMAX, "%s/%s", statedir, filename);
+    } else {
+        strncpy(afilename, filename, ABSFILEMAX);
+    }
+
+    err = NULL;
+    if (g_key_file_load_from_file(gf, afilename, G_KEY_FILE_KEEP_COMMENTS, &err))
+    {
+        printf("[INFO] Successfully loaded %s\n",afilename);
+    } else {
+        fprintf(stderr,"[ERROR] failed to load file %s.\n[ERROR] Cause:%s\n.",
+                afilename,err->message);
+    }
+
+    free(afilename);   
+    return ret;
+}
+
 int handle_old_state_files(void)
 {
     GList* sfilelist;
@@ -580,6 +613,7 @@ int handle_old_state_files(void)
     }
     fpair = (filenamepair_t*)sfilelist->data;
     printf("[INFO] Selecting most recent state file %s\n",fpair->filename);
+    load_state_file(fpair->filename);
     return 0;
 }
 
