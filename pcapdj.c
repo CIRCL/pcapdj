@@ -247,7 +247,8 @@ void wait_auth_to_proceed(redisContext* ctx, char* filename)
     } while (1);
 }
 
-void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
+void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename, 
+                  uint64_t offset)
 {
     wtap *wth;
     int err;
@@ -272,18 +273,20 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
         while (wtap_read(wth, &err, &errinfo, &data_offset)) {
             suspend_pcapdj_if_needed("Stop feeding buffer.");
             stats.state = PCAPDJ_I_STATE_FEED;
-            phdr = wtap_phdr(wth);
-            buf = wtap_buf_ptr(wth);
-            pchdr.caplen = phdr->caplen;
-            pchdr.len = phdr->len;
-            pchdr.ts.tv_sec = phdr->ts.secs;
-            /* Need to convert micro to nano seconds */
-            pchdr.ts.tv_usec = phdr->ts.nsecs/1000;
-            pcap_dump((u_char*)dumper, &pchdr, buf);
-            stats.num_packets++;
-            stats.sum_cap_lengths+=phdr->caplen;
-            stats.sum_lengths+=phdr->caplen;
             stats.infile_cnt++;
+            if (stats.infile_cnt > offset) {
+                phdr = wtap_phdr(wth);
+                buf = wtap_buf_ptr(wth);
+                pchdr.caplen = phdr->caplen;
+                pchdr.len = phdr->len;
+                pchdr.ts.tv_sec = phdr->ts.secs;
+                /* Need to convert micro to nano seconds */
+                pchdr.ts.tv_usec = phdr->ts.nsecs/1000;
+                pcap_dump((u_char*)dumper, &pchdr, buf);
+                stats.num_packets++;
+                stats.sum_cap_lengths+=phdr->caplen;
+                stats.sum_lengths+=phdr->caplen;
+            }
         }
         update_processed_queue(ctx, filename);
         wtap_close(wth);
@@ -309,7 +312,7 @@ int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv
     /* Check if a previously started instance processed a file */
     if (stats.lastprocessedfile[0]){
         printf("[INFO] Found last processed file %s\n",stats.lastprocessedfile);
-        process_file(ctx, dumper, stats.lastprocessedfile);
+        process_file(ctx, dumper, stats.lastprocessedfile, stats.infile_cnt);
     } else {
         printf("[INFO] No last processed file was found.\n");
     }
@@ -323,8 +326,7 @@ int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv
         /* We got a reply */
         rtype = reply->type;
         if (rtype == REDIS_REPLY_STRING) {
-            process_file(ctx, dumper, reply->str);
-            
+            process_file(ctx, dumper, reply->str,0);
         }
         freeReplyObject(reply);
     } while (rtype != REDIS_REPLY_NIL);
