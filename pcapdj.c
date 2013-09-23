@@ -18,6 +18,8 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+#define _XOPEN_SOURCE 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
@@ -28,6 +30,11 @@
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
+#include <dirent.h>
+#include <glib.h>
+#include <stdint.h>
+#include <assert.h>
+#include <time.h>
 #define PQUEUE "PCAPDJ_IN_QUEUE"
 #define RQUEUE "PCAPDJ_PROCESSED"
 #define NEXTJOB "PCAPDJ_NEXT"
@@ -458,6 +465,66 @@ void remove_trailing_slash(char* filename)
     }
 }
 
+uint32_t extract_timestamp(char* filename)
+{
+    char *p;
+    int i;
+    char* buf;
+    uint32_t out;
+    struct tm tm;
+    /* Error when no properly parsed */
+    out = -1;
+    buf = calloc(ABSFILEMAX,1);
+    assert(buf);
+    
+    p = strstr(filename,"pcapdj_states_");
+    if (p) {
+        p+=14;
+        for (i=0; i<strlen(filename); i++)
+            if (filename[i] == '.') {
+                assert((i-14) >0);
+                strncpy(buf,p,i-14);
+                break;
+            }
+        if (buf[0]) {
+            if (strptime(buf,"%Y%m%d%H%M%S",&tm)) {
+                if (strftime(buf,16, "%s",&tm)){
+                    out = atoi(buf);
+                }
+            }
+        }    
+    }
+    free(buf);
+    return out;
+}
+
+int search_old_state_files(void)
+{
+    DIR* d;
+    struct dirent* entry;
+    char* r;
+    uint32_t epoch;
+    GSList* dirlist;
+
+    if (!statedir[0])
+        statedir[0] = '.';
+    printf("[INFO] Looking for old state files in %s\n",statedir);
+    d = opendir(statedir);
+    if (d) {
+        while ((entry = readdir(d)) != NULL) {
+            r = strstr(entry->d_name,"pcapdj_states_");
+            if (r == entry->d_name) { 
+                epoch = extract_timestamp(entry->d_name);
+                if (epoch > 0) {
+                    printf("[INFO] Identified state file %s at timestamp %d \n",
+                           entry->d_name, epoch);
+                }
+            }
+        }
+    }
+    return 0;
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -514,6 +581,9 @@ int main(int argc, char* argv[])
     fprintf(stderr, "[INFO] named pipe = %s\n", namedpipe);
     fprintf(stderr, "[INFO] pid = %d\n",(int)getpid());
     fprintf(stderr, "[INFO] used state directory:%s\n", statedir);
+
+    search_old_state_files();
+
     /* Open the pcap named pipe */
     pcap = pcap_open_dead(DLT_EN10MB, 65535);
     if (pcap) {
