@@ -563,6 +563,23 @@ GList *search_old_state_files(void)
     return dirlist;
 }
 
+int handle_old_state_files(void)
+{
+    GList* sfilelist;
+    GList* p;
+    filenamepair_t *fpair;
+    sfilelist = search_old_state_files();
+    if (sfilelist){ 
+        p = sfilelist;
+        while (p) {
+            fpair = (filenamepair_t*)p->data;
+            printf("[INFO] Identified old state file %s\n", fpair->filename);
+            p=p->next;
+        }
+    }
+    return 0;
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -620,7 +637,7 @@ int main(int argc, char* argv[])
     fprintf(stderr, "[INFO] pid = %d\n",(int)getpid());
     fprintf(stderr, "[INFO] used state directory:%s\n", statedir);
 
-    search_old_state_files();
+    handle_old_state_files();
 
     /* Open the pcap named pipe */
     pcap = pcap_open_dead(DLT_EN10MB, 65535);
