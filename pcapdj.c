@@ -68,6 +68,12 @@ typedef struct statistics_s {
     char lastprocessedfile[ABSFILEMAX]; 
 } statistics_t;
 
+typedef struct filenamepair_s {
+    char filename[FILENAME_MAX];
+    uint32_t epoch;
+} filenamepair_t;
+
+
 /* Global variables */
 sig_atomic_t sigusr1_suspend = 0;
 statistics_t stats;
@@ -498,16 +504,38 @@ uint32_t extract_timestamp(char* filename)
     return out;
 }
 
-int search_old_state_files(void)
+int  fpaircmp (filenamepair_t* a, filenamepair_t* b) {
+    int r;
+    if (a->epoch < b->epoch) {
+        r = -1;
+    } else {
+        if (a->epoch > b->epoch) {
+            r = 1;
+        } else {
+            /* Both are equals */
+            r = 0;
+        }
+    }
+    
+    printf("[DEBUG] Comparing %s %d with %s %d. Returned:%d\n",
+           a->filename, a->epoch, b->filename, b->epoch,r);
+    return r; 
+}
+
+GList *search_old_state_files(void)
 {
     DIR* d;
     struct dirent* entry;
     char* r;
     uint32_t epoch;
-    GSList* dirlist;
-
+    GList* dirlist;
+    filenamepair_t * fpair;
+    /* If no directory was specified the current directory should be used */
     if (!statedir[0])
         statedir[0] = '.';
+
+    dirlist = NULL;
+
     printf("[INFO] Looking for old state files in %s\n",statedir);
     d = opendir(statedir);
     if (d) {
@@ -518,11 +546,17 @@ int search_old_state_files(void)
                 if (epoch > 0) {
                     printf("[INFO] Identified state file %s at timestamp %d \n",
                            entry->d_name, epoch);
+                    fpair = calloc(sizeof(filenamepair_t),1);
+                    assert(fpair);
+                    strncpy((char*)&fpair->filename, entry->d_name, FILENAME_MAX);
+                    fpair->epoch = epoch; 
+                    dirlist = g_list_append(dirlist, fpair);
                 }
             }
         }
     }
-    return 0;
+    g_list_sort(dirlist, (GCompareFunc)&fpaircmp); 
+    return dirlist;
 }
 
 int main(int argc, char* argv[])
