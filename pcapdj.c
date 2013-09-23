@@ -415,7 +415,7 @@ int save_internal_states()
     if (fd) { 
         fprintf(fd,"[PCAPDJ_STATES]\n");
         fprintf(fd,"lastprocessedfile=%s\n",stats.lastprocessedfile);
-        fprintf(fd,"offset:%ld\n",stats.infile_cnt);
+        fprintf(fd,"offset=%ld\n",stats.infile_cnt);
         fprintf(fd, "[STATS]\n");
         if (strftime((char*)&stimebuf, 64, "%Y-%d-%m %H:%M:%S",
             stats.starttime)){
@@ -442,11 +442,11 @@ int save_internal_states()
         default:
             fprintf(fd,"state=unknown\n");        
         }
-        fprintf(fd,"num_suspend:%ld\n",stats.num_suspend);
-        fprintf(fd,"num_files:%ld\n",stats.num_files);
-        fprintf(fd,"num_packets:%ld\n",stats.num_packets);
-        fprintf(fd,"num_cap_lengths:%ld\n",stats.sum_cap_lengths);
-        fprintf(fd,"num_lengths:%ld\n",stats.sum_lengths);
+        fprintf(fd,"num_suspend=%ld\n",stats.num_suspend);
+        fprintf(fd,"num_files=%ld\n",stats.num_files);
+        fprintf(fd,"num_packets=%ld\n",stats.num_packets);
+        fprintf(fd,"num_cap_lengths=%ld\n",stats.sum_cap_lengths);
+        fprintf(fd,"num_lengths=%ld\n",stats.sum_lengths);
         fprintf(stderr, "[INFO] Saved internal states to %s\n",filename);
         fclose(fd);
         free(filename);
