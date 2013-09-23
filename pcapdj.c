@@ -220,6 +220,13 @@ void wait_auth_to_proceed(redisContext* ctx, char* filename)
 {
     redisReply *reply;
     stats.state = PCAPDJ_I_STATE_AUTH_WAIT;
+    /* If at this stage. The last processed file is not relevant anymore.
+     * the file is assumed to be processed. If the program is terminated
+     * at this stage and reloaded afterwards, then the lastprocessedfile
+     * should not be taken. 
+     */
+     stats.lastprocessedfile[0] = 0;
+     stats.infile_cnt = 0;
     /* If there is an error the program waits forever */
     
     do {
