@@ -517,8 +517,10 @@ int  fpaircmp (filenamepair_t* a, filenamepair_t* b) {
         }
     }
     
-    printf("[DEBUG] Comparing %s %d with %s %d. Returned:%d\n",
-           a->filename, a->epoch, b->filename, b->epoch,r);
+    /* printf("[DEBUG] Comparing %s %d with %s %d. Returned:%d\n",
+     *      a->filename, a->epoch, b->filename, b->epoch,r);
+     * Debuging purpose
+     */
     return r; 
 }
 
@@ -544,8 +546,10 @@ GList *search_old_state_files(void)
             if (r == entry->d_name) { 
                 epoch = extract_timestamp(entry->d_name);
                 if (epoch > 0) {
-                    printf("[INFO] Identified state file %s at timestamp %d \n",
-                           entry->d_name, epoch);
+                    /* printf("[INFO] Identified state file %s at timestamp %d \n",
+                     *     entry->d_name, epoch); 
+                     * Debuging purpose
+                     */
                     fpair = calloc(sizeof(filenamepair_t),1);
                     assert(fpair);
                     strncpy((char*)&fpair->filename, entry->d_name, FILENAME_MAX);
@@ -555,7 +559,7 @@ GList *search_old_state_files(void)
             }
         }
     }
-    g_list_sort(dirlist, (GCompareFunc)&fpaircmp); 
+    dirlist = g_list_sort(dirlist, (GCompareFunc)&fpaircmp); 
     return dirlist;
 }
 
