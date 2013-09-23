@@ -570,6 +570,8 @@ int load_state_file(char* filename)
     GError *err;
     char *afilename;
     int ret;
+    char *lfbuf;
+    uint64_t offset;
 
     ret = 0;
     gf = g_key_file_new();
@@ -588,6 +590,23 @@ int load_state_file(char* filename)
     if (g_key_file_load_from_file(gf, afilename, G_KEY_FILE_KEEP_COMMENTS, &err))
     {
         printf("[INFO] Successfully loaded %s\n",afilename);
+        err = NULL;
+        offset = g_key_file_get_integer (gf,"PCAPDJ_STATES", "offset", &err);
+        lfbuf = g_key_file_get_value (gf, "PCAPDJ_STATES","lastprocessedfile",
+                &err);
+        if (lfbuf) {
+            if (lfbuf[0]) {
+                printf("[INFO] Using old offset %ld\n", offset);
+                printf("[INFO] Using old filename %s\n", lfbuf); 
+                strncpy((char*)&stats.lastprocessedfile, lfbuf, ABSFILEMAX);
+                stats.infile_cnt = offset; 
+            }
+        } else {
+            if (err) {
+                fprintf(stderr,"[ERROR] Broken pcapdj_state file %s\n",
+                        err->message); 
+            }
+        }
     } else {
         fprintf(stderr,"[ERROR] failed to load file %s.\n[ERROR] Cause:%s\n.",
                 afilename,err->message);
