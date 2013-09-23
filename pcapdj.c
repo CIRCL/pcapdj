@@ -306,6 +306,13 @@ int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv
         return EXIT_FAILURE;
     }
     
+    /* Check if a previously started instance processed a file */
+    if (stats.lastprocessedfile[0]){
+        printf("[INFO] Found last processed file %s\n",stats.lastprocessedfile);
+        process_file(ctx, dumper, stats.lastprocessedfile);
+    } else {
+        printf("[INFO] No last processed file was found.\n");
+    }
 
     do {
         reply = redisCommand(ctx,"LPOP %s", PQUEUE); 
