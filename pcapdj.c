@@ -448,6 +448,16 @@ int save_internal_states()
     return 0;
 }
 
+void remove_trailing_slash(char* filename)
+{
+    int l;
+    l = strlen(filename);
+    if (l>0) {
+        if (filename[l-1] == '/')
+            filename[l-1] = 0;
+    }
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -481,6 +491,7 @@ int main(int argc, char* argv[])
                 break;
             case 'd':
                 strncpy((char*)&statedir, optarg, ABSFILEMAX);
+                remove_trailing_slash((char*)&statedir);
                 break;
             case 'h':
                 usage();
