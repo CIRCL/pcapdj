@@ -560,6 +560,7 @@ GList *search_old_state_files(void)
         }
     }
     dirlist = g_list_sort(dirlist, (GCompareFunc)&fpaircmp); 
+    dirlist = g_list_reverse(dirlist);
     return dirlist;
 }
 
