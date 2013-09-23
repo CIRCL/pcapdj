@@ -603,17 +603,19 @@ int handle_old_state_files(void)
     GList* p;
     filenamepair_t *fpair;
     sfilelist = search_old_state_files();
-    if (sfilelist){ 
+    if (sfilelist) { 
         p = sfilelist;
         while (p) {
             fpair = (filenamepair_t*)p->data;
             printf("[INFO] Identified old state file %s\n", fpair->filename);
             p=p->next;
         }
+        fpair = (filenamepair_t*)sfilelist->data;
+        printf("[INFO] Selecting most recent state file %s\n",fpair->filename);
+        load_state_file(fpair->filename);
+    } else {
+        printf("[INFO] No previously saved states were found.\n");
     }
-    fpair = (filenamepair_t*)sfilelist->data;
-    printf("[INFO] Selecting most recent state file %s\n",fpair->filename);
-    load_state_file(fpair->filename);
     return 0;
 }
 
