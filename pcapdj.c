@@ -65,7 +65,7 @@ typedef struct statistics_s {
     u_int8_t oldstate;
     time_t startepoch;
     struct tm *starttime;
-    char lastprocessedfile[ABSFILEMAX]; 
+    char currentprocessedfile[ABSFILEMAX]; 
 } statistics_t;
 
 typedef struct filenamepair_s {
@@ -151,7 +151,7 @@ void display_stats()
     printf("[STATS] Number of packets:%ld\n",stats.num_packets);
     printf("[STATS] Number of cap_lengths:%ld\n",stats.sum_cap_lengths);
     printf("[STATS] Number of lengths:%ld\n",stats.sum_lengths);
-    printf("[INFO] Last processed file:%s\n",stats.lastprocessedfile);
+    printf("[INFO] Last processed file:%s\n",stats.currentprocessedfile);
     printf("[INFO] Packet offset:%ld\n",stats.infile_cnt);
 }
 
@@ -265,7 +265,7 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename,
     fprintf(stderr,"[INFO] Next file to process %s\n",filename);
     update_next_file(ctx, filename);
     
-    strncpy((char*)&stats.lastprocessedfile, filename, ABSFILEMAX);
+    strncpy((char*)&stats.currentprocessedfile, filename, ABSFILEMAX);
     stats.infile_cnt=0;
     
     if (!resume) {
@@ -317,9 +317,9 @@ int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv
     }
     
     /* Check if a previously started instance processed a file */
-    if (stats.lastprocessedfile[0]){
-        printf("[INFO] Found last processed file %s\n",stats.lastprocessedfile);
-        process_file(ctx, dumper, stats.lastprocessedfile, stats.infile_cnt,1);
+    if (stats.currentprocessedfile[0]){
+        printf("[INFO] Found last processed file %s\n",stats.currentprocessedfile);
+        process_file(ctx, dumper, stats.currentprocessedfile, stats.infile_cnt,1);
     } else {
         printf("[INFO] No last processed file was found.\n");
     }
@@ -451,7 +451,7 @@ int save_internal_states()
     fd = fopen(filename,"w");
     if (fd) { 
         fprintf(fd,"[PCAPDJ_STATES]\n");
-        fprintf(fd,"lastprocessedfile=%s\n",stats.lastprocessedfile);
+        fprintf(fd,"currentprocessedfile=%s\n",stats.currentprocessedfile);
         fprintf(fd,"offset=%ld\n",stats.infile_cnt);
         fprintf(fd, "[STATS]\n");
         if (strftime((char*)&stimebuf, 64, "%Y-%d-%m %H:%M:%S",
@@ -629,13 +629,13 @@ int load_state_file(char* filename)
         printf("[INFO] Successfully loaded %s\n",afilename);
         err = NULL;
         offset = g_key_file_get_integer (gf,"PCAPDJ_STATES", "offset", &err);
-        lfbuf = g_key_file_get_value (gf, "PCAPDJ_STATES","lastprocessedfile",
+        lfbuf = g_key_file_get_value (gf, "PCAPDJ_STATES","currentprocessedfile",
                 &err);
         if (lfbuf) {
             if (lfbuf[0]) {
                 printf("[INFO] Using old offset %ld\n", offset);
                 printf("[INFO] Using old filename %s\n", lfbuf); 
-                strncpy((char*)&stats.lastprocessedfile, lfbuf, ABSFILEMAX);
+                strncpy((char*)&stats.currentprocessedfile, lfbuf, ABSFILEMAX);
                 stats.infile_cnt = offset; 
             }
         } else {
