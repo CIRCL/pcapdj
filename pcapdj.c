@@ -79,6 +79,7 @@ sig_atomic_t sigusr1_suspend = 0;
 statistics_t stats;
 char statedir[ABSFILEMAX];
 int ignore;
+int shouldreset;
 
 int save_internal_states();
 
@@ -86,7 +87,7 @@ void usage(void)
 {
     
     printf("pcapdj [-h] -b namedpipe [-s redis_server] -p [redis_srv_port]%s",
-           "[-d statedir] [-i]\n\n");
+           "[-d statedir] [-i] [-r] \n\n");
     printf("Connects to the redis instance specified with by the redis_server\n");
     printf("and redis_srv_port.\n\n"); 
 
@@ -347,6 +348,24 @@ int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv
     return EXIT_SUCCESS;
 }
  
+void reset_redis_structures(char *redis_server, int redis_srv_port)
+{
+    redisContext* ctx;
+    ctx = redisConnect(redis_server, redis_srv_port);
+
+    if (ctx != NULL && ctx->err) {
+        fprintf(stderr,"[ERROR] Could not connect to redis. %s\n",ctx->errstr);
+        return;
+    }
+    printf("[INFO] Connected to redis %s on port %d\n", redis_server, 
+           redis_srv_port);
+    printf("[INFO] Reseting data structures\n");
+    redisCommand(ctx, "DEL %s",PQUEUE);
+    redisCommand(ctx, "DEL %s",RQUEUE);
+    redisCommand(ctx, "DEL %s",NEXTJOB);
+    redisCommand(ctx, "DEL %s",AKEY);
+    redisCommand(ctx, "DEL %s",PCAPDJ_STATE);
+}
 
 void init(void)
 {
@@ -362,6 +381,8 @@ void init(void)
     assert(stats.starttime);
     
     bzero((char*)&statedir, ABSFILEMAX);
+    
+    shouldreset = 0;
 
     /* Install signal handler */
     sa.sa_handler = &sig_handler;
@@ -673,7 +694,7 @@ int main(int argc, char* argv[])
     assert(redis_server);
 
     redis_srv_port = 6379;        
-    while ((opt = getopt(argc, argv, "b:hs:p:d:i")) != -1) {
+    while ((opt = getopt(argc, argv, "b:hs:p:d:ir")) != -1) {
         switch (opt) {
             case 's':
                 strncpy(redis_server,optarg,64);
@@ -694,6 +715,9 @@ int main(int argc, char* argv[])
             case 'i':
                 ignore = 1;
                 break;
+            case 'r':
+                shouldreset = 1;
+                break;
             default: /* '?' */
                 fprintf(stderr, "[ERROR] Invalid command line was specified\n");
         }
@@ -702,6 +726,9 @@ int main(int argc, char* argv[])
     if (!redis_server[0])
         strncpy(redis_server,DEFAULT_SRV,64);
     /* Connect to redis */
+    if (shouldreset)
+        reset_redis_structures(redis_server, redis_srv_port);
+        return EXIT_SUCCESS;
     if (!namedpipe[0]){
         fprintf(stderr,"[ERROR] A named pipe must be specified\n");
         return EXIT_FAILURE; 
