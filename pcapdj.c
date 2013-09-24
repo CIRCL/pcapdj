@@ -382,6 +382,7 @@ void init(void)
     
     bzero((char*)&statedir, ABSFILEMAX);
     
+    ignore = 0;
     shouldreset = 0;
 
     /* Install signal handler */
