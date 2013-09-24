@@ -5,3 +5,4 @@ Some points that could be done on pcapdj ...
 * Use autoconf to build pcap dj
 * write man page
 * do more extensive tests -> (copy pcap data via pcap dj and compare etc)
+* do valgrind tests
