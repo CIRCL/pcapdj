@@ -1,7 +1,6 @@
 Some points that could be done on pcapdj ...
 
 * rename last processed file to currentprocessed file
-* cleanup filelist
 * write easy to use importer program
 * Use autoconf to build pcap dj
 * write man page

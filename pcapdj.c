@@ -653,6 +653,21 @@ int load_state_file(char* filename)
     return ret;
 }
 
+void destroy_filelist(GList *filelist)
+{
+    GList* p;
+    filenamepair_t *fpair;
+    if (filelist) {
+        p = filelist;
+        while (p) {
+            fpair = (filenamepair_t*) p->data;
+            free(fpair);
+            p = p->next;
+        }
+        g_list_free(filelist);
+    }
+}
+
 int handle_old_state_files(void)
 {
     GList* sfilelist;
@@ -672,6 +687,7 @@ int handle_old_state_files(void)
     } else {
         printf("[INFO] No previously saved states were found.\n");
     }
+    destroy_filelist(sfilelist);
     return 0;
 }
 
