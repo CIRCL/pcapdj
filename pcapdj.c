@@ -255,7 +255,7 @@ void wait_auth_to_proceed(redisContext* ctx, char* filename)
 }
 
 void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename, 
-                  uint64_t offset)
+                  uint64_t offset, int resume)
 {
     wtap *wth;
     int err;
@@ -267,9 +267,10 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename,
 
     fprintf(stderr,"[INFO] Next file to process %s\n",filename);
     update_next_file(ctx, filename);
-    fprintf(stderr,"[INFO] Waiting authorization to process file %s\n",filename);
-    wait_auth_to_proceed(ctx, filename);
-    
+    if (!resume) {
+        fprintf(stderr,"[INFO] Waiting authorization to process file %s\n",filename);
+        wait_auth_to_proceed(ctx, filename);
+    }
     strncpy((char*)&stats.lastprocessedfile, filename, ABSFILEMAX);
     stats.infile_cnt=0;
 
@@ -319,7 +320,7 @@ int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv
     /* Check if a previously started instance processed a file */
     if (stats.lastprocessedfile[0]){
         printf("[INFO] Found last processed file %s\n",stats.lastprocessedfile);
-        process_file(ctx, dumper, stats.lastprocessedfile, stats.infile_cnt);
+        process_file(ctx, dumper, stats.lastprocessedfile, stats.infile_cnt,1);
     } else {
         printf("[INFO] No last processed file was found.\n");
     }
@@ -333,7 +334,7 @@ int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv
         /* We got a reply */
         rtype = reply->type;
         if (rtype == REDIS_REPLY_STRING) {
-            process_file(ctx, dumper, reply->str,0);
+            process_file(ctx, dumper, reply->str,0,0);
         }
         freeReplyObject(reply);
     } while (rtype != REDIS_REPLY_NIL);
