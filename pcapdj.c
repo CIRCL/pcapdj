@@ -86,25 +86,96 @@ int save_internal_states();
 void usage(void)
 {
     
-    printf("pcapdj [-h] -b namedpipe [-s redis_server] -p [redis_srv_port]%s",
-           "[-d statedir] [-i] [-r] \n\n");
-    printf("Connects to the redis instance specified with by the redis_server\n");
-    printf("and redis_srv_port.\n\n"); 
+    printf("pcapdj [-h] [-b namedpipe] [-s redis_server] [-p redis_srv_port]%s",
+           " [-d statedir]\n       [-i] [-r] \n\n");
+    printf("Connects to the redis instance specified by the %s", 
+           "redis_server and\nredis_srv_port.\n\n"); 
 
-    printf("Read a list of pcap-ng files from the  queue PCAPDJ_IN_QUEUE.\n");
-    printf("Open the pcap-ng file and feed each packet to the fifo buffer\n"); 
-    printf("specified by with the -b option.  When a pcap file from the list\n"); 
-    printf("has been transferred to the buffer update the queue PCAPDJ_PROCESSED\n");
-    printf("with the filename that just was processed.\n\n"); 
+    printf("Pcap files are read from the queue PCAPDJ_IN_QUEUE. ");
+    printf("Each pcap file is opened and\nthe contained packets are put %s ",
+           "into the fifo buffer "); 
+    printf("specified by with the -b \noption when an explicit permission ");
+    printf("is granted.\n\n"); 
+    printf("When pcapdj is started it connects to the named pipe and waits%s",
+           " for the consumer\n");
+    printf("program which processes the frames included in the pcap files.\n");
+    printf("\nWhen the consumer program connected to the named pipe, pcapdj%s",
+           " pops the redis\n");
+    printf("queue PCAPDJ_IN_QUEUE which should contain filenames of pcap %s",
+           "files that are\n");
+    printf("planned to be processed.\n\n");
+    printf("The pcap file name that is planned to be processed is put in %s",
+           "the redis queue\n"); 
+    printf("entitled PCAPDJ_NEXT. Another program, denoted controller %s",
+           "program should\n");
+    printf("take the latest element of the queue PCAPDJ_NEXT and do the %s",
+           "necessary checks,\n"); 
+    printf("such as if there is enough of disk space, monitor memory %s",
+           "consumption etc. When\n");
+    printf("all the checks are fine, the value of the redis key %s",
+           "PCAPDJ_AUTH is updated with \nthe ");
+    printf("pcap file name that is planned to be processed.\n\n");
+    printf("Pcapdj notices this and starts to feed the named pipe until %s",
+           "it is suspended or\n");
+    printf("if the end of the pcap file is reached. Pcapdj closes the pcap %s",
+           "file and asks for\npermission to process the next pcap file ");
+    printf("included in the redis queue labeled\nPCAPDJ_IN_QUEUE.\n");
+    printf("Pcapdj does not close the file descriptor of the named pipe. %s",
+           "Hence, the\n");
+    printf("consumer program \"thinks\" that it is still reading the same %s",
+           "pcap file.\n\n");
+    printf("This process goes on until the redis queue PCAPDJ_IN_QUEUE is %s",
+           "empty and the\n");
+    printf("file descriptor of the named pipe is closed.\n\n");
+    printf("REPORTING\n\n");
 
-    printf("Update the  PCAPDJ_NEXT with the next file that is beeing processed.\n");
-    printf("Poll PCAPDJ_AUTH key. When the value of this key corresponds to the next file then use \n");
-    printf("the next pcap file and feed the fifo buffer with the packets.\n");
-    printf("\nWhen the last packet of the last file has been processed the fifo\n");
-    printf("the file handle  is closed.\n"); 
+    printf("When pcapdj is running for a long period and if the consumer %s",
+            "program is not\n");
+    printf("very verbose, the signal SIGUSR2 can be sent to pcap dj. %s",
+           "Pcapdj shows then\n");
+    printf("on standard output similar to the report shown in the %s",
+           "example below.\n\n");
 
-    printf("\nOPTIONS\n");
-    printf("    -d <statedir> Specify the state directory to store internal states\n");
+    printf("EXAMPLE\n\n");
+
+    printf("    [STATS] Start time:2013-24-09 14:19:57\n");
+    printf("    [STATS] Uptime:30 (seconds)\n");
+    printf("    [STATS] Internal state:Feeding fifo buffer\n");
+    printf("    [STATS] Number of suspensions:0\n");
+    printf("    [STATS] Number of files:1\n");
+    printf("    [STATS] Number of packets:978\n");
+    printf("    [STATS] Number of cap_lengths:626286\n");
+    printf("    [STATS] Number of lengths:626286\n");
+    printf("    [INFO] Last processed file:2.pcap.gz\n");
+    printf("    [INFO] Packet offset:979\n\n");
+
+    printf("SUSPENDING PCAPDJ\n\n");
+    printf("Pcapdj can be suspended during operation by sending the %s",
+           "SIGNAL SIG_USR1\n");
+    printf("If suspended pcapdj does not feed packets anymore %s",
+           "to the named pipe.\n");
+    printf("Please note that there are internal buffers of named pipes.\n");
+    printf("Hence, the effects are not immediate.\n"); 
+    printf("Pcapdj shows the following message when suspended.\n\n");
+    printf("    [INFO] Suspending pcapdj\n\n");
+    printf("When pcapdj is resumed the following message is shown.\n\n");
+    printf("    [INFO] Resuming pcapdj\n\n");
+       
+    printf("\nOPTIONS\n\n");
+    printf("    -h                   Shows this screen\n");
+    printf("    -b <namedpipe>       Specify a named pipe previously %s ",
+           "created with mkfifo\n");
+    printf("   -s <redis_server>    Specify a redis-server used for %s",
+           "interactions.\n");
+    printf("                         Default one: 127.0.0.1\n");
+    printf("    -p <redis_srv_port>  Specify the port where redis %s",
+           "listens on.\n");
+    printf("                         Default one: 6379\n"); 
+    printf("    -d <statedir>        Specify the state directory to store %s",
+           "internal states\n");
+    printf("    -i                   Ignore the old state files if found.\n");
+    printf("    -r                   Delete in redis all data structures %s ",
+           "used by pcapdj\n");
 }
 
 void suspend_pcapdj_if_needed(const char *state) 
