@@ -358,14 +358,14 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename,
             suspend_pcapdj_if_needed("Stop feeding buffer.");
             stats.state = PCAPDJ_I_STATE_FEED;
             stats.infile_cnt++;
+            phdr = wtap_phdr(wth);
+            buf = wtap_buf_ptr(wth);
+            pchdr.caplen = phdr->caplen;
+            pchdr.len = phdr->len;
+            pchdr.ts.tv_sec = phdr->ts.secs;
+            /* Need to convert micro to nano seconds */
+            pchdr.ts.tv_usec = phdr->ts.nsecs/1000;
             if (stats.infile_cnt > offset) {
-                phdr = wtap_phdr(wth);
-                buf = wtap_buf_ptr(wth);
-                pchdr.caplen = phdr->caplen;
-                pchdr.len = phdr->len;
-                pchdr.ts.tv_sec = phdr->ts.secs;
-                /* Need to convert micro to nano seconds */
-                pchdr.ts.tv_usec = phdr->ts.nsecs/1000;
                 pcap_dump((u_char*)dumper, &pchdr, buf);
                 stats.num_packets++;
                 stats.sum_cap_lengths+=phdr->caplen;
