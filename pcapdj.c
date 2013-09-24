@@ -246,6 +246,12 @@ void sig_handler(int signal_number)
     if (signal_number == SIGUSR2) {
         display_stats();
     }
+
+    if (signal_number == SIGPIPE) {
+        fprintf(stderr,"[ERROR] Consumer program died.\n");
+        save_internal_states();
+        exit(1);
+    }
     if (signal_number == SIGTERM || signal_number == SIGINT) {
         printf("[INFO] Got TERM or INT signal\n");
         save_internal_states();
@@ -462,6 +468,7 @@ void init(void)
     sigaction(SIGUSR2, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGPIPE, &sa, NULL);
 }
 
 /* The file is composed of the following format
