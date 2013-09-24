@@ -743,9 +743,10 @@ int main(int argc, char* argv[])
     if (!redis_server[0])
         strncpy(redis_server,DEFAULT_SRV,64);
     /* Connect to redis */
-    if (shouldreset)
+    if (shouldreset) {
         reset_redis_structures(redis_server, redis_srv_port);
         return EXIT_SUCCESS;
+    }
     if (!namedpipe[0]){
         fprintf(stderr,"[ERROR] A named pipe must be specified\n");
         return EXIT_FAILURE; 
