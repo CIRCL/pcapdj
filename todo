@@ -1,7 +1,6 @@
 Some points that could be done on pcapdj ...
 
 * rename last processed file to currentprocessed file
-* add command line to ignore the saved states
 * add command line feature to reset all PCAPDJ keys in redis
 * cleanup filelist
 * write easy to use importer program

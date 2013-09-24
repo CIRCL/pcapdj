@@ -78,13 +78,15 @@ typedef struct filenamepair_s {
 sig_atomic_t sigusr1_suspend = 0;
 statistics_t stats;
 char statedir[ABSFILEMAX];
+int ignore;
 
 int save_internal_states();
 
 void usage(void)
 {
     
-    printf("pcapdj [-h] -b namedpipe [-s redis_server] -p [redis_srv_port] [-d statedir]\n\n");
+    printf("pcapdj [-h] -b namedpipe [-s redis_server] -p [redis_srv_port]%s",
+           "[-d statedir] [-i]\n\n");
     printf("Connects to the redis instance specified with by the redis_server\n");
     printf("and redis_srv_port.\n\n"); 
 
@@ -220,13 +222,7 @@ void wait_auth_to_proceed(redisContext* ctx, char* filename)
 {
     redisReply *reply;
     stats.state = PCAPDJ_I_STATE_AUTH_WAIT;
-    /* If at this stage. The last processed file is not relevant anymore.
-     * the file is assumed to be processed. If the program is terminated
-     * at this stage and reloaded afterwards, then the lastprocessedfile
-     * should not be taken. 
-     */
-     stats.lastprocessedfile[0] = 0;
-     stats.infile_cnt = 0;
+    
     /* If there is an error the program waits forever */
     
     do {
@@ -267,12 +263,14 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename,
 
     fprintf(stderr,"[INFO] Next file to process %s\n",filename);
     update_next_file(ctx, filename);
+    
+    strncpy((char*)&stats.lastprocessedfile, filename, ABSFILEMAX);
+    stats.infile_cnt=0;
+    
     if (!resume) {
         fprintf(stderr,"[INFO] Waiting authorization to process file %s\n",filename);
         wait_auth_to_proceed(ctx, filename);
     }
-    strncpy((char*)&stats.lastprocessedfile, filename, ABSFILEMAX);
-    stats.infile_cnt=0;
 
     wth = wtap_open_offline ( filename, (int*)&err, (char**)&errinfo, FALSE);
     if (wth) {
@@ -675,7 +673,7 @@ int main(int argc, char* argv[])
     assert(redis_server);
 
     redis_srv_port = 6379;        
-    while ((opt = getopt(argc, argv, "b:hs:p:d:")) != -1) {
+    while ((opt = getopt(argc, argv, "b:hs:p:d:i")) != -1) {
         switch (opt) {
             case 's':
                 strncpy(redis_server,optarg,64);
@@ -693,6 +691,9 @@ int main(int argc, char* argv[])
             case 'h':
                 usage();
                 return EXIT_SUCCESS;
+            case 'i':
+                ignore = 1;
+                break;
             default: /* '?' */
                 fprintf(stderr, "[ERROR] Invalid command line was specified\n");
         }
@@ -711,8 +712,11 @@ int main(int argc, char* argv[])
     fprintf(stderr, "[INFO] named pipe = %s\n", namedpipe);
     fprintf(stderr, "[INFO] pid = %d\n",(int)getpid());
     fprintf(stderr, "[INFO] used state directory:%s\n", statedir);
-
-    handle_old_state_files();
+    if (!ignore) {
+        handle_old_state_files();
+    } else {
+        fprintf(stderr,"[INFO] ignoring old state files\n");
+    }
 
     /* Open the pcap named pipe */
     pcap = pcap_open_dead(DLT_EN10MB, 65535);
