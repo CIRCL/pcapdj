@@ -83,6 +83,7 @@ char statedir[ABSFILEMAX];
 int ignore;
 int shouldreset;
 int suspend_treshold; 
+int database_num;
 
 int save_internal_states();
 void display_stats();
@@ -472,6 +473,17 @@ int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv
         return EXIT_FAILURE;
     }
     
+    /* Select database */
+    reply = redisCommand(ctx, "SELECT %d\n",database_num);
+    if (!reply) {
+        fprintf(stderr,"[ERROR] Could not select the redis database %d\n",
+                database_num);
+        return EXIT_FAILURE;
+    }
+    if ((reply->type == REDIS_REPLY_ERROR) || (reply->type == REDIS_REPLY_NIL)){
+        fprintf(stderr,"[ERROR] Could not select the redis database %d\n",1);
+        return EXIT_FAILURE;
+    }
     /* Check if a previously started instance processed a file */
     if (stats.currentprocessedfile[0]){
         printf("[INFO] Found last processed file %s\n",stats.currentprocessedfile);
@@ -507,6 +519,7 @@ int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv
 void reset_redis_structures(char *redis_server, int redis_srv_port)
 {
     redisContext* ctx;
+    redisReply* reply;
     ctx = redisConnect(redis_server, redis_srv_port);
 
     if (ctx != NULL && ctx->err) {
@@ -516,6 +529,20 @@ void reset_redis_structures(char *redis_server, int redis_srv_port)
     printf("[INFO] Connected to redis %s on port %d\n", redis_server, 
            redis_srv_port);
     printf("[INFO] Reseting data structures\n");
+    
+    /* Select database */
+    reply = redisCommand(ctx, "SELECT %d\n",database_num);
+    if (!reply) {
+        fprintf(stderr,"[ERROR] Could not select the redis database %d\n",
+                database_num);
+        return;
+    }
+    if ((reply->type == REDIS_REPLY_ERROR) || (reply->type == REDIS_REPLY_NIL)){
+        fprintf(stderr,"[ERROR] Could not select the redis database %d\n",1);
+        return;
+    }
+
+    /* Delete the related fields */
     redisCommand(ctx, "DEL %s",PQUEUE);
     redisCommand(ctx, "DEL %s",RQUEUE);
     redisCommand(ctx, "DEL %s",NEXTJOB);
@@ -542,6 +569,7 @@ void init(void)
     ignore = 0;
     shouldreset = 0;
     suspend_treshold = DEFAULT_SUSPEND_TRS;
+    database_num = 0;
 
     /* Install signal handler */
     sa.sa_handler = &sig_handler;
@@ -868,7 +896,7 @@ int main(int argc, char* argv[])
     assert(redis_server);
 
     redis_srv_port = 6379;        
-    while ((opt = getopt(argc, argv, "b:hs:p:d:irt:")) != -1) {
+    while ((opt = getopt(argc, argv, "b:hs:p:d:irt:n:")) != -1) {
         switch (opt) {
             case 's':
                 strncpy(redis_server,optarg,64);
@@ -895,6 +923,9 @@ int main(int argc, char* argv[])
             case 't':
                 suspend_treshold = atoi(optarg);
                 break; 
+            case 'n':
+                database_num = atoi(optarg);
+                break;
             default: /* '?' */
                 fprintf(stderr, "[ERROR] Invalid command line was specified\n");
         }
@@ -914,6 +945,7 @@ int main(int argc, char* argv[])
 
     fprintf(stderr, "[INFO] redis_server = %s\n",redis_server);
     fprintf(stderr, "[INFO] redis_port = %d\n",redis_srv_port);
+    fprintf(stderr, "[INFO] used redis database number = %d\n",database_num);
     fprintf(stderr, "[INFO] named pipe = %s\n", namedpipe);
     fprintf(stderr, "[INFO] pid = %d\n",(int)getpid());
     fprintf(stderr, "[INFO] used state directory:%s\n", statedir);
