@@ -194,7 +194,6 @@ void check_stat_request(redisContext* ctx)
         if (reply->type == REDIS_REPLY_STRING) {
             if (!strncmp(reply->str, buf, 16)) {
                 display_stats();
-                /* FIXME This could delete another instance's request */
                 /* Delete key otherwise the stats are repeated */
                 reply2 = redisCommand(ctx,"DEL %s",CKEY);
                 if (reply2)
