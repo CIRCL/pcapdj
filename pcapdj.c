@@ -91,14 +91,14 @@ void usage(void)
 {
     
     printf("pcapdj [-h] [-b namedpipe] [-s redis_server] [-p redis_srv_port]%s",
-           " [-d statedir]\n       [-i] [-r] [-t]\n\n");
+           " [-d statedir]\n       [-i] [-r] [-t N]\n\n");
     printf("Connects to the redis instance specified by the %s", 
            "redis_server and\nredis_srv_port.\n\n"); 
 
     printf("Pcap files are read from the queue PCAPDJ_IN_QUEUE. ");
-    printf("Each pcap file is opened and\nthe contained packets are put %s ",
-           "into the fifo buffer "); 
-    printf("specified by with the -b \noption when an explicit permission ");
+    printf("Each pcap file is opened\nand the contained packets are put %s ",
+           "into the fifo buffer"); 
+    printf("specified by with the\n-b option when an explicit permission ");
     printf("is granted.\n\n"); 
     printf("When pcapdj is started it connects to the named pipe and waits%s",
            " for the consumer\n");
@@ -117,13 +117,13 @@ void usage(void)
     printf("such as if there is enough of disk space, monitor memory %s",
            "consumption etc. When\n");
     printf("all the checks are fine, the value of the redis key %s",
-           "PCAPDJ_AUTH is updated with \nthe ");
+           "PCAPDJ_AUTH is updated\nwith the ");
     printf("pcap file name that is planned to be processed.\n\n");
     printf("Pcapdj notices this and starts to feed the named pipe until %s",
            "it is suspended or\n");
     printf("if the end of the pcap file is reached. Pcapdj closes the pcap %s",
-           "file and asks for\npermission to process the next pcap file ");
-    printf("included in the redis queue labeled\nPCAPDJ_IN_QUEUE.\n");
+           "file and asks\nfor permission to process the next pcap file ");
+    printf("included in the redis queue\nlabeled PCAPDJ_IN_QUEUE.\n");
     printf("Pcapdj does not close the file descriptor of the named pipe. %s",
            "Hence, the\n");
     printf("consumer program \"thinks\" that it is still reading the same %s",
