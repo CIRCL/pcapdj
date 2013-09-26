@@ -351,6 +351,7 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename,
     }
 
     wth = wtap_open_offline ( filename, (int*)&err, (char**)&errinfo, FALSE);
+    data_offset = 0;
     if (wth) {
         stats.num_files++;
         /* Loop over the packets and adjust the headers */
