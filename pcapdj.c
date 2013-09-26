@@ -92,7 +92,7 @@ void usage(void)
 {
     
     printf("pcapdj [-h] [-b namedpipe] [-s redis_server] [-p redis_srv_port]%s",
-           " [-d statedir]\n       [-i] [-r] [-t N]\n\n");
+           " [-d statedir]\n       [-i] [-r] [-t N] [-n databasenumber]\n\n");
     printf("Connects to the redis instance specified by the %s", 
            "redis_server and\nredis_srv_port.\n\n"); 
 
@@ -181,6 +181,7 @@ void usage(void)
     printf("                         Default one: 127.0.0.1\n");
     printf("    -p <redis_srv_port>  Specify the port where redis %s",
            "listens on.\n");
+    printf("    -n <database number> Specify the redis database number\n");
     printf("                         Default one: 6379\n"); 
     printf("    -d <statedir>        Specify the state directory to store %s",
            "internal states\n");
