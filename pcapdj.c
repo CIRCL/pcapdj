@@ -39,6 +39,7 @@
 #define RQUEUE "PCAPDJ_PROCESSED"
 #define NEXTJOB "PCAPDJ_NEXT"
 #define AKEY "PCAPDJ_AUTH"
+#define SKEY "PCAPDJ_SUSPEND"
 #define DEFAULT_SRV "127.0.0.1"
 #define POLLINT 100000
 #define PCAPDJ_STATE "PCAPDJ_STATE"
@@ -49,6 +50,7 @@
 #define PCAPDJ_I_STATE_SUSPEND 1
 #define PCAPDJ_I_STATE_AUTH_WAIT 2
 #define PCAPDJ_I_STATE_FEED 3 
+#define DEFAULT_SUSPEND_TRS 500 
 #include <hiredis/hiredis.h>
 #include <linux/limits.h>
 
@@ -80,6 +82,7 @@ statistics_t stats;
 char statedir[ABSFILEMAX];
 int ignore;
 int shouldreset;
+int suspend_treshold; 
 
 int save_internal_states();
 
@@ -178,14 +181,30 @@ void usage(void)
            "used by pcapdj\n");
 }
 
-void suspend_pcapdj_if_needed(const char *state) 
+void suspend_pcapdj_if_needed(redisContext* ctx) 
 {
-    if (sigusr1_suspend) {
-        fprintf(stderr,"[INFO] pcapdj is suspended. %s\n",state);
-        while (sigusr1_suspend) { 
-                usleep(POLLINT);
+    redisReply *reply;
+    pid_t pid;
+    char buf[16];
+    
+    pid = getpid();
+    snprintf((char*)&buf,16,"%d",pid);
+
+    reply = redisCommand(ctx,"GET %s",SKEY);
+    if (reply) {
+        if (reply->type == REDIS_REPLY_STRING) {
+            if (!strncmp(reply->str, buf, 16)) {
+                fprintf(stderr, "[INFO] Suspending pcapdj pid=%s\n", buf);
+                //TODO Poll for being unsuspended
+            } else {
+                fprintf(stderr,"[ERROR] Another instance should be %s%s\n",
+                               "suspended not me. Other pid=", reply->str);
+                }
+            } 
+            freeReplyObject(reply);
+        }else{
+            fprintf(stderr,"[ERROR] Could not check for being suspended\n");
         }
-    }
 }
 
 void display_stats()
@@ -356,7 +375,8 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename,
         stats.num_files++;
         /* Loop over the packets and adjust the headers */
         while (wtap_read(wth, &err, &errinfo, &data_offset)) {
-            suspend_pcapdj_if_needed("Stop feeding buffer.");
+            if (stats.infile_cnt % suspend_treshold == 0) 
+                suspend_pcapdj_if_needed(ctx);
             stats.state = PCAPDJ_I_STATE_FEED;
             stats.infile_cnt++;
             phdr = wtap_phdr(wth);
@@ -462,6 +482,7 @@ void init(void)
     
     ignore = 0;
     shouldreset = 0;
+    suspend_treshold = DEFAULT_SUSPEND_TRS;
 
     /* Install signal handler */
     sa.sa_handler = &sig_handler;
@@ -814,6 +835,9 @@ int main(int argc, char* argv[])
             case 'r':
                 shouldreset = 1;
                 break;
+            case 't':
+                suspend_treshold = atoi(optarg);
+                break; 
             default: /* '?' */
                 fprintf(stderr, "[ERROR] Invalid command line was specified\n");
         }
