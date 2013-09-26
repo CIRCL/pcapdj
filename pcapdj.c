@@ -181,6 +181,44 @@ void usage(void)
            "used by pcapdj\n");
 }
 
+void wait_to_resume(redisContext* ctx)
+{
+    redisReply *reply;
+    pid_t pid;
+    char buf[16];
+
+    pid = getpid();
+    snprintf((char*)&buf, 16, "%d", pid);
+
+    stats.state = PCAPDJ_I_STATE_AUTH_WAIT;
+    
+    /* If there is an error the program waits forever */
+    
+    do {
+        reply = redisCommand(ctx,"GET %s",SKEY);
+        if (reply){
+            if (reply->type == REDIS_REPLY_STRING) {
+                if (strncmp(reply->str, buf, 16)) {
+                    fprintf(stderr,"[INFO] There is a pcapdj instance (%s) \
+that is suspended but it's not me\n",reply->str);
+                    goto out;
+                }
+            } else{
+                /* Another value was returned for instance NULL */
+                goto out;
+            }       
+            freeReplyObject(reply);
+        } else {
+            fprintf(stderr,"[ERROR] redis server did not replied for being\
+unsuspended\n");
+        }
+        usleep(POLLINT);
+    } while (1);
+    out:
+        freeReplyObject(reply);
+        printf("[INFO] Resuming pcapdj\n");
+}
+
 void suspend_pcapdj_if_needed(redisContext* ctx) 
 {
     redisReply *reply;
@@ -195,9 +233,9 @@ void suspend_pcapdj_if_needed(redisContext* ctx)
         if (reply->type == REDIS_REPLY_STRING) {
             if (!strncmp(reply->str, buf, 16)) {
                 fprintf(stderr, "[INFO] Suspending pcapdj pid=%s\n", buf);
-                //TODO Poll for being unsuspended
+                wait_to_resume(ctx);
             } else {
-                fprintf(stderr,"[ERROR] Another instance should be %s%s\n",
+                fprintf(stderr,"[INFO] Another instance should be %s%s\n",
                                "suspended not me. Other pid=", reply->str);
                 }
             } 
