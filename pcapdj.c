@@ -866,7 +866,7 @@ int main(int argc, char* argv[])
     assert(redis_server);
 
     redis_srv_port = 6379;        
-    while ((opt = getopt(argc, argv, "b:hs:p:d:ir")) != -1) {
+    while ((opt = getopt(argc, argv, "b:hs:p:d:irt:")) != -1) {
         switch (opt) {
             case 's':
                 strncpy(redis_server,optarg,64);
