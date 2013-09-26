@@ -40,6 +40,7 @@
 #define NEXTJOB "PCAPDJ_NEXT"
 #define AKEY "PCAPDJ_AUTH"
 #define SKEY "PCAPDJ_SUSPEND"
+#define CKEY "PCAPDJ_STATS"
 #define DEFAULT_SRV "127.0.0.1"
 #define POLLINT 100000
 #define PCAPDJ_STATE "PCAPDJ_STATE"
@@ -84,6 +85,7 @@ int shouldreset;
 int suspend_treshold; 
 
 int save_internal_states();
+void display_stats();
 
 void usage(void)
 {
@@ -179,6 +181,30 @@ void usage(void)
     printf("    -r                   Delete in redis all data structures %s ",
            "used by pcapdj\n");
 }
+
+void check_stat_request(redisContext* ctx)
+{
+    redisReply *reply;
+    redisReply *reply2; 
+    char buf[16];
+    
+    snprintf((char*)&buf, 16,"%d",getpid());
+    reply = redisCommand(ctx, "GET %s", CKEY);
+    if (reply) {
+        if (reply->type == REDIS_REPLY_STRING) {
+            if (!strncmp(reply->str, buf, 16)) {
+                display_stats();
+                /* FIXME This could delete another instance's request */
+                /* Delete key otherwise the stats are repeated */
+                reply2 = redisCommand(ctx,"DEL %s",CKEY);
+                if (reply2)
+                    freeReplyObject(reply2);
+            }
+        }
+        freeReplyObject(reply);
+    }
+}
+
 
 void wait_to_resume(redisContext* ctx)
 {
@@ -396,8 +422,10 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename,
         stats.num_files++;
         /* Loop over the packets and adjust the headers */
         while (wtap_read(wth, &err, &errinfo, &data_offset)) {
-            if (stats.infile_cnt % suspend_treshold == 0) 
+            if (stats.infile_cnt % suspend_treshold == 0) { 
                 suspend_pcapdj_if_needed(ctx);
+                check_stat_request(ctx); 
+            }
             stats.state = PCAPDJ_I_STATE_FEED;
             stats.infile_cnt++;
             phdr = wtap_phdr(wth);
