@@ -5,9 +5,3 @@ Some points that could be done on pcapdj ...
 * write man page
 * do more extensive tests -> (copy pcap data via pcap dj and compare etc)
 * do valgrind tests
-* write macro for suspend_pcapdj_if_needed
-
-KNOWN BUGS
- 
-Signals are not synchronized even in commit 
-ad18562153518b6a5d1b00e594523b5f5a6408a4 the consumer program might die
