@@ -77,7 +77,6 @@ typedef struct filenamepair_s {
 
 
 /* Global variables */
-sig_atomic_t sigusr1_suspend = 0;
 statistics_t stats;
 char statedir[ABSFILEMAX];
 int ignore;
@@ -284,21 +283,6 @@ void display_stats()
 
 void sig_handler(int signal_number)
 {
-    if (signal_number == SIGUSR1) {
-        sigusr1_suspend=~sigusr1_suspend;
-
-        if (sigusr1_suspend) {
-            printf("[INFO] Suspending pcapdj\n");
-            stats.oldstate = stats.state;
-            stats.state = PCAPDJ_I_STATE_SUSPEND;
-            stats.num_suspend++;
-            /* This function should not block otherwise the resume does not work */
-        }else{
-            printf("[INFO] Resuming pcapdj\n");
-            stats.state = stats.oldstate;
-            stats.oldstate = PCAPDJ_I_STATE_SUSPEND;
-        }
-    }
     if (signal_number == SIGUSR2) {
         display_stats();
     }
@@ -506,7 +490,6 @@ void init(void)
 {
     struct sigaction sa;
     
-    sigusr1_suspend = 0;
     memset(&sa,0,sizeof(sa));
     memset(&stats,0,sizeof(statistics_t));
     
