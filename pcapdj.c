@@ -309,10 +309,6 @@ void display_stats()
 
 void sig_handler(int signal_number)
 {
-    if (signal_number == SIGUSR2) {
-        display_stats();
-    }
-
     if (signal_number == SIGPIPE) {
         fprintf(stderr,"[ERROR] Consumer program died.\n");
         save_internal_states();
@@ -534,8 +530,6 @@ void init(void)
 
     /* Install signal handler */
     sa.sa_handler = &sig_handler;
-    sigaction(SIGUSR1, &sa, NULL);
-    sigaction(SIGUSR2, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGPIPE, &sa, NULL);
