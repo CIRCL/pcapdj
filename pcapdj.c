@@ -135,9 +135,12 @@ void usage(void)
 
     printf("When pcapdj is running for a long period and if the consumer %s",
             "program is not\n");
-    printf("very verbose, the signal SIGUSR2 can be sent to pcap dj. %s",
-           "Pcapdj shows then\n");
-    printf("on standard output similar to the report shown in the %s",
+    printf("very verbose, the process identifier of pcapdj can be given to %s",
+           " the redis key\nPCAPDJ_STATS. ");
+    printf("Pcapdj polls this value each N packets and reacts appropriately\n");
+    printf("The default value of N is 500. This value can be overriden with ");
+    printf("the -t switch.\n");
+    printf("On standard output similar to the report shown in the %s",
            "example below.\n\n");
 
     printf("EXAMPLE\n\n");
@@ -154,8 +157,11 @@ void usage(void)
     printf("    [INFO] Packet offset:979\n\n");
 
     printf("SUSPENDING PCAPDJ\n\n");
-    printf("Pcapdj can be suspended during operation by sending the %s",
-           "SIGNAL SIG_USR1\n");
+    printf("Pcapdj can be suspended during operation by setting the %s",
+           "redis key\nPCAPDJ_SUSPEND to the process identifier of");
+    printf(" pcapdj.\nPcapdj polls this queue every N packets.\n");
+    printf("The default value of N is 500. This value can be overriden with ");
+    printf("the -t switch.\n");
     printf("If suspended pcapdj does not feed packets anymore %s",
            "to the named pipe.\n");
     printf("Please note that there are internal buffers of named pipes.\n");
