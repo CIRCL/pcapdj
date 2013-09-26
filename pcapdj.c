@@ -190,10 +190,8 @@ void wait_to_resume(redisContext* ctx)
     pid = getpid();
     snprintf((char*)&buf, 16, "%d", pid);
 
-    stats.state = PCAPDJ_I_STATE_AUTH_WAIT;
-    
-    /* If there is an error the program waits forever */
-    
+    stats.state = PCAPDJ_I_STATE_SUSPEND;
+
     do {
         reply = redisCommand(ctx,"GET %s",SKEY);
         if (reply){
