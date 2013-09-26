@@ -917,6 +917,8 @@ int main(int argc, char* argv[])
     fprintf(stderr, "[INFO] named pipe = %s\n", namedpipe);
     fprintf(stderr, "[INFO] pid = %d\n",(int)getpid());
     fprintf(stderr, "[INFO] used state directory:%s\n", statedir);
+    fprintf(stderr, "[INFO] used check interval (suspend and stats) %s%d\n",
+                    "denoted N=",suspend_treshold);
     if (!ignore) {
         handle_old_state_files();
     } else {
