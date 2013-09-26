@@ -231,6 +231,7 @@ void suspend_pcapdj_if_needed(redisContext* ctx)
         if (reply->type == REDIS_REPLY_STRING) {
             if (!strncmp(reply->str, buf, 16)) {
                 fprintf(stderr, "[INFO] Suspending pcapdj pid=%s\n", buf);
+                stats.num_suspend++;
                 wait_to_resume(ctx);
             } else {
                 fprintf(stderr,"[INFO] Another instance should be %s%s\n",
