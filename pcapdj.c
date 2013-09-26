@@ -521,6 +521,8 @@ void reset_redis_structures(char *redis_server, int redis_srv_port)
     redisCommand(ctx, "DEL %s",NEXTJOB);
     redisCommand(ctx, "DEL %s",AKEY);
     redisCommand(ctx, "DEL %s",PCAPDJ_STATE);
+    redisCommand(ctx, "DEL %s",CKEY);
+    redisCommand(ctx, "DEL %s\n",SKEY);
 }
 
 void init(void)
