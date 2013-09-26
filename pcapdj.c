@@ -91,7 +91,7 @@ void usage(void)
 {
     
     printf("pcapdj [-h] [-b namedpipe] [-s redis_server] [-p redis_srv_port]%s",
-           " [-d statedir]\n       [-i] [-r] \n\n");
+           " [-d statedir]\n       [-i] [-r] [-t]\n\n");
     printf("Connects to the redis instance specified by the %s", 
            "redis_server and\nredis_srv_port.\n\n"); 
 
@@ -186,6 +186,14 @@ void usage(void)
     printf("    -i                   Ignore the old state files if found.\n");
     printf("    -r                   Delete in redis all data structures %s ",
            "used by pcapdj\n");
+    printf("   -t                   Specify the number N meaning after");
+    printf(" how many packets\n");
+    printf("                         PCAPDJ_SUSPEND and PCAPDJ_STATS %s\n",
+           "should be queried.");
+    printf("                         The higher N is, the lower the ");
+    printf("performance overhead.\n");
+    printf("                         A high value of N makes pcapdj less %s", 
+           "reactive.\n");
 }
 
 void check_stat_request(redisContext* ctx)
