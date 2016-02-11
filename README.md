@@ -69,7 +69,7 @@ for rf in files:
         red.rpush("PCAPDJ_IN_QUEUE",f)
 ```
 
-Create a name pipe that is shared between pcapdj and suricta
+Create a name pipe that is shared between pcapdj and suricata
 ```
 mkfifo /tmp/pcapbuffer
 ```
@@ -102,7 +102,7 @@ put previously in the queue PCAPDJ_NEXT.
 [INFO] Waiting authorization to process file /tmp/testpcaps/2.pcap
 ```
 
-Launch the controler script that authorizes each pcap file that is put 
+Launch the controller script that authorizes each pcap file that is put 
 in the named pipe.
 
 ```python
