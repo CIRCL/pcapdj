@@ -400,12 +400,10 @@ int main(int argc, char* argv[])
         context = zmq_ctx_new();
         publisher =  zmq_socket (context, ZMQ_PUB);
         rc = zmq_bind(publisher, pubstr);
-        if (rc == 0) {
-            fprintf(stderr,"[INFO] Bound ZMQ socket\n");
-        } else {
+        if (rc != 0) {
             fprintf(stderr,"[ERROR] Could not bind ZMQ socket\n");
+            return EXIT_FAILURE;
         }
-        return EXIT_FAILURE;
     }
 
     fprintf(stderr, "[INFO] redis_server = %s\n",redis_server);
