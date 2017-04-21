@@ -387,33 +387,40 @@ int main(int argc, char* argv[])
         }
         return EXIT_FAILURE;
     }
+
     fprintf(stderr, "[INFO] redis_server = %s\n",redis_server);
     fprintf(stderr, "[INFO] redis_port = %d\n",redis_srv_port);
     fprintf(stderr, "[INFO] named pipe = %s\n", namedpipe);
     fprintf(stderr, "[INFO] pid = %d\n",(int)getpid());
 
-    /* Open the pcap named pipe */
-    pcap = pcap_open_dead(DLT_EN10MB, 65535);
-    if (pcap) {
+    if (namedpipe[0]) {
+        /* Open the pcap named pipe */
+        pcap = pcap_open_dead(DLT_EN10MB, 65535);
         printf("[INFO] Waiting for other peer (IDS, tcp-reassembly engine, etc)...\n");
-        dumper = pcap_dump_open(pcap, namedpipe);
-        if (dumper) {
-            r = process_input_queue(dumper, redis_server, redis_srv_port);
-            if (r == EXIT_FAILURE) {
-                fprintf(stderr,"[ERROR] Something went wrong in during processing");
-            }else{
-                fprintf(stderr,"[INFO] All went fine. No files in the pipe to process.\n");
+        if (pcap) {
+            dumper = pcap_dump_open(pcap, namedpipe);
+            if (!dumper) {
+                fprintf(stderr,"[ERROR] pcap dumper failed\n");
             }
-            /* In all case close the connection */
-            pcap_dump_close(dumper);
-            return r;
-        }else {
-            fprintf(stderr,"[ERROR] pcap dumper failed\n");
+        } else{
+            fprintf(stderr, "[ERROR] pcap_open_dead failed\n");
         }
-        pcap_close(pcap);
-    }else {
-        fprintf(stderr, "[ERROR] pcap_open_dead failed\n");
     }
-    return EXIT_FAILURE;
+    r = process_input_queue(dumper, redis_server, redis_srv_port);
+    if (r == EXIT_FAILURE) {
+        fprintf(stderr,"[ERROR] Something went wrong in during processing");
+    } else{
+        fprintf(stderr,"[INFO] All went fine. No files in the pipe to process.\n");
+    }
+
+    /* Cleanup actions */
+    if (dumper) {
+        pcap_dump_close(dumper);
+    }
+    if (pcap) {
+        pcap_close(pcap);
+    }
+    //TODO cleanup of zmq
+    return r;
 }
 
