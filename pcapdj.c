@@ -252,16 +252,19 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, void *publisher, cha
             if (dumper) {
                 //TODO check errors
                 pcap_dump((u_char*)dumper, &pchdr, buf);
-            }
-            if (publisher) {
-                 //TODO check errors
-                 //TODO merge pcap header + buffer + pcapdj header
-                 ptr = packet_buf;
-                 memcpy(ptr, &pchdr, sizeof(struct  pcap_pkthdr));
-                 ptr+=sizeof(struct pcap_pkthdr);
-                 memcpy(ptr, buf, pchdr.caplen);
-                 // FIXME avoid memcpy
-                 zmq_send (publisher, packet_buf, sizeof(struct pcap_pkthdr), 2);
+            } else {
+                if (publisher) {
+                     //TODO check errors
+                     //TODO merge pcap header + buffer + pcapdj header
+                     ptr = packet_buf;
+                     memcpy(ptr, &pchdr, sizeof(struct  pcap_pkthdr));
+                     ptr+=sizeof(struct pcap_pkthdr);
+                     memcpy(ptr, buf, pchdr.caplen);
+                     // FIXME avoid memcpy
+                     zmq_send (publisher, packet_buf, sizeof(struct pcap_pkthdr), 2);
+                } else {
+                    fprintf(stderr, "[INFO] Could not do anything with packet?\n");
+                }
             }
             stats.num_packets++;
             stats.sum_cap_lengths+=phdr->caplen;
