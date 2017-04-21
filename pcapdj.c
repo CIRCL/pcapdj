@@ -27,6 +27,7 @@
 #include <wtap.h>
 #include <unistd.h>
 #include <signal.h>
+#include <zmq.h>
 #define PQUEUE "PCAPDJ_IN_QUEUE"
 #define RQUEUE "PCAPDJ_PROCESSED"
 #define NEXTJOB "PCAPDJ_NEXT"
@@ -327,6 +328,9 @@ int main(int argc, char* argv[])
     char *pubstr;
     pcap_t *pcap;
     pcap_dumper_t *dumper;
+    int rc;
+    void *publisher;
+    void *context;
     
     init();
     
@@ -373,7 +377,15 @@ int main(int argc, char* argv[])
 
     if (pubstr[0]) {
         fprintf(stderr, "[INFO] Use ZMQ publisher string: %s\n", pubstr);
-        return EXIT_SUCCESS;
+        context = zmq_ctx_new();
+        publisher =  zmq_socket (context, ZMQ_PUB);
+        rc = zmq_bind(publisher, pubstr);
+        if (rc == 0) {
+            fprintf(stderr,"[INFO] Bound ZMQ socket\n");
+        } else {
+            fprintf(stderr,"[ERROR] Could not bind ZMQ socket\n");
+        }
+        return EXIT_FAILURE;
     }
     fprintf(stderr, "[INFO] redis_server = %s\n",redis_server);
     fprintf(stderr, "[INFO] redis_port = %d\n",redis_srv_port);
