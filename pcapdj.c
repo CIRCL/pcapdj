@@ -36,6 +36,7 @@
 #define POLLINT 100000
 #define PCAPDJ_STATE "PCAPDJ_STATE"
 #define PCAPDJ_STATE_DONE "DONE"
+#define MAX_PACKET_BUF 4096
 
 /* Internal pcapdj states */
 #define PCAPDJ_I_STATE_RUN 0
@@ -60,6 +61,8 @@ typedef struct statistics_s {
 /* Global variables */
 sig_atomic_t sigusr1_suspend = 0;
 statistics_t stats;
+char* packet_buf;
+
 
 void usage(void)
 {
@@ -216,7 +219,7 @@ void wait_auth_to_proceed(redisContext* ctx, char* filename)
     } while (1);
 }
 
-void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
+void process_file(redisContext* ctx, pcap_dumper_t* dumper, void *publisher, char* filename)
 {
     wtap *wth;
     int err;
@@ -225,6 +228,7 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
     const struct wtap_pkthdr *phdr;
     struct pcap_pkthdr pchdr;
     guint8 *buf;
+    char* ptr;
 
     fprintf(stderr,"[INFO] Next file to process %s\n",filename);
     update_next_file(ctx, filename);
@@ -245,7 +249,20 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
             pchdr.ts.tv_sec = phdr->ts.secs;
             /* Need to convert micro to nano seconds */
             pchdr.ts.tv_usec = phdr->ts.nsecs/1000;
-            pcap_dump((u_char*)dumper, &pchdr, buf);
+            if (dumper) {
+                //TODO check errors
+                pcap_dump((u_char*)dumper, &pchdr, buf);
+            }
+            if (publisher) {
+                 //TODO check errors
+                 //TODO merge pcap header + buffer + pcapdj header
+                 ptr = packet_buf;
+                 memcpy(ptr, &pchdr, sizeof(struct  pcap_pkthdr));
+                 ptr+=sizeof(struct pcap_pkthdr);
+                 memcpy(ptr, buf, pchdr.caplen);
+                 // FIXME avoid memcpy
+                 zmq_send (publisher, packet_buf, sizeof(struct pcap_pkthdr), 2);
+            }
             stats.num_packets++;
             stats.sum_cap_lengths+=phdr->caplen;
             stats.sum_lengths+=phdr->caplen;
@@ -259,7 +276,7 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
     }
 }
 
-int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv_port)
+int process_input_queue(pcap_dumper_t *dumper, void* publisher, char* redis_server, int redis_srv_port)
 {
     redisContext* ctx; 
     redisReply* reply;    
@@ -281,7 +298,7 @@ int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv
         /* We got a reply */
         rtype = reply->type;
         if (rtype == REDIS_REPLY_STRING) {
-            process_file(ctx, dumper, reply->str);
+            process_file(ctx, dumper, publisher, reply->str);
             
         }
         freeReplyObject(reply);
@@ -311,6 +328,9 @@ void init(void)
     stats.starttime = localtime(&stats.startepoch);
     assert(stats.starttime);
 
+    packet_buf = calloc(MAX_PACKET_BUF,1);
+    assert(packet_buf);
+
     /* Install signal handler */
     sa.sa_handler = &sig_handler;
     sigaction(SIGUSR1, &sa, NULL);
@@ -329,8 +349,8 @@ int main(int argc, char* argv[])
     pcap_t *pcap;
     pcap_dumper_t *dumper;
     int rc;
-    void *publisher;
-    void *context;
+    void *publisher = NULL;
+    void *context = NULL;
     
     init();
     
@@ -406,7 +426,7 @@ int main(int argc, char* argv[])
             fprintf(stderr, "[ERROR] pcap_open_dead failed\n");
         }
     }
-    r = process_input_queue(dumper, redis_server, redis_srv_port);
+    r = process_input_queue(dumper, publisher, redis_server, redis_srv_port);
     if (r == EXIT_FAILURE) {
         fprintf(stderr,"[ERROR] Something went wrong in during processing");
     } else{
