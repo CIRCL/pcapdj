@@ -229,7 +229,8 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
     update_next_file(ctx, filename);
     fprintf(stderr,"[INFO] Waiting authorization to process file %s\n",filename);
     wait_auth_to_proceed(ctx, filename);
-    wth = wtap_open_offline ( filename, (int*)&err, (char**)&errinfo, FALSE);
+    wth = wtap_open_offline ( filename, WTAP_TYPE_AUTO, (int*)&err,
+                             (char**)&errinfo, FALSE);
     if (wth) {
         stats.num_files++;
         /* Loop over the packets and adjust the headers */
