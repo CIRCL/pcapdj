@@ -33,9 +33,9 @@ Dependencies
 ------------
 
 
-In an Ubuntu 12.04 Operating system the following packages must be installed.
+In an Ubuntu 16.04 Operating system the following packages must be installed.
 
-apt-get install libwiretap-dev libpcap-dev libhiredis-dev libglib2.0-dev
+apt-get install libwsutil-dev libwiretap-dev libpcap-dev libhiredis-dev libglib2.0-dev
 
 Compiling
 ---------
