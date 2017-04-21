@@ -346,7 +346,7 @@ int main(int argc, char* argv[])
     int redis_srv_port; 
     char *namedpipe;
     char *pubstr;
-    pcap_t *pcap;
+    pcap_t *pcap = NULL;
     pcap_dumper_t *dumper = NULL;
     int rc;
     void *publisher = NULL;
