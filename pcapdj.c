@@ -62,8 +62,7 @@ typedef struct statistics_s {
 sig_atomic_t sigusr1_suspend = 0;
 statistics_t stats;
 char* packet_buf;
-
-
+useconds_t delay = 0;
 void usage(void)
 {
     
@@ -262,6 +261,7 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, void *publisher, cha
                      memcpy(ptr, buf, pchdr.caplen);
                      // FIXME avoid memcpy
                      zmq_send (publisher, packet_buf, sizeof(struct pcap_pkthdr), 2);
+                     usleep(delay);
                 } else {
                     fprintf(stderr, "[INFO] Could not do anything with packet?\n");
                 }
@@ -367,7 +367,7 @@ int main(int argc, char* argv[])
     assert(pubstr);
 
     redis_srv_port = 6379;        
-    while ((opt = getopt(argc, argv, "b:hs:p:z:")) != -1) {
+    while ((opt = getopt(argc, argv, "b:hs:p:z:d:")) != -1) {
         switch (opt) {
             case 's':
                 strncpy(redis_server,optarg,64);
@@ -383,6 +383,9 @@ int main(int argc, char* argv[])
                 return EXIT_SUCCESS;
             case 'z':
                 strncpy(pubstr, optarg, 128);
+                break;
+            case 'd':
+                delay = atoi(optarg);
                 break;
             default: /* '?' */
                 fprintf(stderr, "[ERROR] Invalid command line was specified\n");
@@ -413,6 +416,7 @@ int main(int argc, char* argv[])
     fprintf(stderr, "[INFO] redis_port = %d\n",redis_srv_port);
     fprintf(stderr, "[INFO] named pipe = %s\n", namedpipe);
     fprintf(stderr, "[INFO] pid = %d\n",(int)getpid());
+    fprintf(stderr, "[INFO] delay = %d\n", delay);
 
     if (namedpipe[0]) {
         /* Open the pcap named pipe */
