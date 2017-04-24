@@ -342,6 +342,32 @@ void init(void)
     sigaction(SIGUSR2, &sa, NULL);
 }
 
+
+/* Read data from zmq feed and write it to the fifo buffer */
+void consume_zmq(pcap_dumper_t *dumper, char* url)
+{
+    void * context;
+    void * subscriber;
+    int rc;
+    int size=0;
+
+    context = zmq_ctx_new();
+    subscriber = zmq_socket(context, ZMQ_SUB);
+    rc = zmq_connect(subscriber, url);
+    //TODO explore filters?
+    if (rc == 0) {
+        fprintf(stderr,"[INFO] Connected to socket at %s\n", url);
+        //FIXME do better stuff i.e. SIG_USR2 toggles hexdump mode for debugging
+        while ( 1 ) {
+            //FIXME What is the last zero?
+            printf("[TEST] Waiting for data\n");
+            size = zmq_recv (subscriber, packet_buf, MAX_PACKET_BUF, 0);
+            printf("[TEST] Received %d bytes \n",size);
+        }
+        printf("[TEST] left endless loop?\n");
+    }
+    //FIXME send back state: error, interrupted, ...
+}
 int main(int argc, char* argv[])
 {
 
@@ -437,7 +463,12 @@ int main(int argc, char* argv[])
             dumper = pcap_dump_open(pcap, namedpipe);
             if (!dumper) {
                 fprintf(stderr,"[ERROR] pcap dumper failed\n");
-            }
+             } else {
+                if (cpubstr[0]) {
+                    fprintf(stderr, "[INFO] Trying to connect to publisher\n");
+                    consume_zmq(dumper, cpubstr);
+                }
+             }
         } else{
             fprintf(stderr, "[ERROR] pcap_open_dead failed\n");
         }
