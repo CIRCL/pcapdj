@@ -348,6 +348,27 @@ void init(void)
 }
 
 
+
+//Feed the fifo buffer with the  packet buffer
+//Return -1 on error
+//Returns 0 on success
+int feed_fifo(pcap_dumper_t* dumper, int size)
+{
+    struct pcap_pkthdr *pchdr;
+    char* data;
+    //TODO handle pcapdj header
+    if (size < sizeof(struct pcap_pkthdr)) {
+        return -1;
+    }
+    pchdr=(struct pcap_pkthdr*)packet_buf;
+    data = packet_buf + sizeof(struct pcap_pkthdr);
+    //FIXME handle errors
+    pcap_dump((u_char*)dumper, pchdr, (const uint8_t*)data);
+    //FIXME temp flush -> set alarm
+      pcap_dump_flush(dumper);
+    return 0;
+}
+
 /* Read data from zmq feed and write it to the fifo buffer */
 void consume_zmq(pcap_dumper_t *dumper, char* url)
 {
@@ -371,6 +392,7 @@ void consume_zmq(pcap_dumper_t *dumper, char* url)
             printf("[TEST] Waiting for data\n");
             size = zmq_recv (subscriber, packet_buf, MAX_PACKET_BUF, 0);
             printf("[TEST] Received %d bytes \n",size);
+            feed_fifo(dumper, size);
         }
         printf("[TEST] left endless loop?\n");
     }
