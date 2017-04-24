@@ -59,6 +59,7 @@ typedef struct statistics_s {
 } statistics_t;
 
 /* Global variables */
+//FIXME Move this in a struct that is passed to each function
 sig_atomic_t sigusr1_suspend = 0;
 statistics_t stats;
 char* packet_buf;
@@ -318,6 +319,7 @@ int process_input_queue(pcap_dumper_t *dumper, void* publisher, char* redis_serv
 }
  
 
+//FIXME Take struct as parameter with the former global variables
 void init(void)
 {
     struct sigaction sa;
@@ -357,7 +359,7 @@ int main(int argc, char* argv[])
     void *context = NULL;
     
     init();
-    
+    //FIXME Move to init
     namedpipe = calloc(128,1);
     assert(namedpipe);  
     
