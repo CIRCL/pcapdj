@@ -349,6 +349,7 @@ int main(int argc, char* argv[])
     int redis_srv_port; 
     char *namedpipe;
     char *pubstr;
+    char *cpubstr;
     pcap_t *pcap = NULL;
     pcap_dumper_t *dumper = NULL;
     int rc;
@@ -366,8 +367,11 @@ int main(int argc, char* argv[])
     pubstr = calloc(128,1);
     assert(pubstr);
 
+    cpubstr = calloc(128,1);
+    assert(cpubstr);
+
     redis_srv_port = 6379;        
-    while ((opt = getopt(argc, argv, "b:hs:p:z:d:")) != -1) {
+    while ((opt = getopt(argc, argv, "b:hs:p:z:d:c:")) != -1) {
         switch (opt) {
             case 's':
                 strncpy(redis_server,optarg,64);
@@ -387,6 +391,10 @@ int main(int argc, char* argv[])
             case 'd':
                 delay = atoi(optarg);
                 break;
+            case 'c':
+                //Consumer zmq stream
+                strncpy(cpubstr, optarg, 128);
+                break;
             default: /* '?' */
                 fprintf(stderr, "[ERROR] Invalid command line was specified\n");
         }
@@ -396,7 +404,7 @@ int main(int argc, char* argv[])
         strncpy(redis_server,DEFAULT_SRV,64);
 
     /* Connect to redis */
-    if ((!namedpipe[1]) && (!pubstr[1])){
+    if ((!namedpipe[0]) && (!pubstr[0])){
         fprintf(stderr,"[ERROR] A named pipe or a ZMQ publisher string must be specified\n");
         return EXIT_FAILURE; 
     }
@@ -417,6 +425,7 @@ int main(int argc, char* argv[])
     fprintf(stderr, "[INFO] named pipe = %s\n", namedpipe);
     fprintf(stderr, "[INFO] pid = %d\n",(int)getpid());
     fprintf(stderr, "[INFO] delay = %d\n", delay);
+    fprintf(stderr, "[INFO] Consumer ZMQ stream = %s\n", cpubstr);
 
     if (namedpipe[0]) {
         /* Open the pcap named pipe */
