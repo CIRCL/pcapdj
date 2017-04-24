@@ -264,7 +264,7 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, void *publisher, cha
                      memcpy(ptr, buf, pchdr.caplen);
                      // FIXME avoid memcpy
                      char *buf =  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\0";
-                     for (i=0; i< 10000; i++) { // FIXME send all the time the same packet
+                     for (i=0; i< 1; i++) { // FIXME send all the time the same packet
 //                     r = zmq_send (publisher, packet_buf, sizeof(struct pcap_pkthdr), 0);
                        r = zmq_send (publisher, buf, 32, 0);
                      // Seems that always EAGAIN is retirned?
