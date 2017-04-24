@@ -267,8 +267,9 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, void *publisher, cha
                      for (i=0; i< 10000; i++) { // FIXME send all the time the same packet
 //                     r = zmq_send (publisher, packet_buf, sizeof(struct pcap_pkthdr), 0);
                        r = zmq_send (publisher, buf, 32, 0);
+                     // Seems that always EAGAIN is retirned?
                      if (r != 0) {
-                        fprintf(stderr, "[ERROR] zmq_send failed. Cause = %s. %d\n",
+                        fprintf(stderr, "[ERROR] zmq_send failed. Packet id = %d. Cause = %s. %d\n", i,
                                 strerror(errno), r);
                      }
                      usleep(delay);
