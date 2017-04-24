@@ -255,6 +255,8 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, void *publisher, cha
                 pcap_dump((u_char*)dumper, &pchdr, buf);
             } else {
                 if (publisher) {
+                    //First packet gets often lost ...
+                     usleep(delay);
                      //TODO check errors
                      //TODO merge pcap header + buffer + pcapdj header
                      ptr = packet_buf;
