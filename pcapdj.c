@@ -18,6 +18,15 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+
+/* Some ZMQ tests
+ *  ./pcapdj -z tcp://127.0.0.1:5556 -d 100
+ * ./pcapdj -c tcp://127.0.0.1:5556 -b /tmp/buffer
+ * tcpdump -n -r /tmp/buffer
+ * +- 1.44% are lost
+ * TODO check which ones are lost
+ * TODO check integrity
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
