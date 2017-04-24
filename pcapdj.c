@@ -229,6 +229,7 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, void *publisher, cha
     struct pcap_pkthdr pchdr;
     guint8 *buf;
     char* ptr;
+    int r;
 
     fprintf(stderr,"[INFO] Next file to process %s\n",filename);
     update_next_file(ctx, filename);
@@ -261,7 +262,11 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, void *publisher, cha
                      ptr+=sizeof(struct pcap_pkthdr);
                      memcpy(ptr, buf, pchdr.caplen);
                      // FIXME avoid memcpy
-                     zmq_send (publisher, packet_buf, sizeof(struct pcap_pkthdr), 2);
+                     r = zmq_send (publisher, packet_buf, sizeof(struct pcap_pkthdr), 2);
+                     if (r != 0) {
+                        fprintf(stderr, "[ERROR] zmq_send failed. Cause = %s.\n",
+                                strerror(errno));
+                     }
                      usleep(delay);
                 } else {
                     fprintf(stderr, "[INFO] Could not do anything with packet?\n");
