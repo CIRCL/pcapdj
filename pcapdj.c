@@ -262,9 +262,8 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, void *publisher, cha
                      ptr+=sizeof(struct pcap_pkthdr);
                      memcpy(ptr, buf, pchdr.caplen);
                      // FIXME avoid memcpy
-                     char *buf =  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\0";
-//                     r = zmq_send (publisher, packet_buf, sizeof(struct pcap_pkthdr), 0);
-                       r = zmq_send (publisher, buf, 32, 0);
+                     r = zmq_send (publisher, packet_buf, sizeof(struct pcap_pkthdr), 0);
+//                       r = zmq_send (publisher, buf, 32, 0);
                      // Seems that always EAGAIN is retirned?
                      if (r != 0) {
                         fprintf(stderr, "[ERROR] zmq_send failed. Cause = %s.%d \n",
