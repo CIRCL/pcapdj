@@ -310,6 +310,8 @@ void init(void)
     stats.starttime = localtime(&stats.startepoch);
     assert(stats.starttime);
 
+    wtap_init();
+
     /* Install signal handler */
     sa.sa_handler = &sig_handler;
     sigaction(SIGUSR1, &sa, NULL);
