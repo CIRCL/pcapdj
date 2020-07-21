@@ -19,14 +19,15 @@
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <getopt.h>
 #include <assert.h>
 #include <string.h>
-#include <pcap/pcap.h>
 #include <wtap.h>
 #include <unistd.h>
 #include <signal.h>
+#include <wsutil/buffer.h>
 #define PQUEUE "PCAPDJ_IN_QUEUE"
 #define RQUEUE "PCAPDJ_PROCESSED"
 #define NEXTJOB "PCAPDJ_NEXT"
@@ -215,15 +216,18 @@ void wait_auth_to_proceed(redisContext* ctx, char* filename)
     } while (1);
 }
 
-void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
+void process_file(redisContext* ctx, wtap_dumper* dumper, char* filename)
 {
     wtap *wth;
-    int err;
+    wtap_rec rec;
+    int err, write_err;
     char *errinfo;
+    gchar *write_err_info;
     gint64 data_offset;
-    const struct wtap_pkthdr *phdr;
-    struct pcap_pkthdr pchdr;
-    guint8 *buf;
+    Buffer readbuf;
+
+    wtap_rec_init(&rec);
+    ws_buffer_init(&readbuf, 1500);
 
     fprintf(stderr,"[INFO] Next file to process %s\n",filename);
     update_next_file(ctx, filename);
@@ -234,31 +238,26 @@ void process_file(redisContext* ctx, pcap_dumper_t* dumper, char* filename)
     if (wth) {
         stats.num_files++;
         /* Loop over the packets and adjust the headers */
-        while (wtap_read(wth, &err, &errinfo, &data_offset)) {
+        while (wtap_read(wth, &rec, &readbuf, &err, &errinfo, &data_offset)) {
             suspend_pcapdj_if_needed("Stop feeding buffer.");
             stats.state = PCAPDJ_I_STATE_FEED;
-            phdr = wtap_phdr(wth);
-            buf = wtap_buf_ptr(wth);
-            pchdr.caplen = phdr->caplen;
-            pchdr.len = phdr->len;
-            pchdr.ts.tv_sec = phdr->ts.secs;
             /* Need to convert micro to nano seconds */
-            pchdr.ts.tv_usec = phdr->ts.nsecs/1000;
-            pcap_dump((u_char*)dumper, &pchdr, buf);
+            wtap_dump(dumper, &rec, ws_buffer_start_ptr(&readbuf), &write_err, &write_err_info);
             stats.num_packets++;
-            stats.sum_cap_lengths+=phdr->caplen;
-            stats.sum_lengths+=phdr->caplen;
+            stats.sum_cap_lengths+=rec.rec_header.packet_header.caplen;
+            stats.sum_lengths+=rec.rec_header.packet_header.caplen;
         }
         update_processed_queue(ctx, filename);
         wtap_close(wth);
-	fprintf(stderr,"[INFO] Processing of filename %s done\n",filename);
+        wtap_rec_cleanup(&rec);
+        ws_buffer_free(&readbuf);
     }else{
         fprintf(stderr, "[ERROR] Could not open filename %s,cause=%s\n",filename,
                 wtap_strerror(err));
     }
 }
 
-int process_input_queue(pcap_dumper_t *dumper, char* redis_server, int redis_srv_port)
+int process_input_queue(wtap_dumper *dumper, char* redis_server, int redis_srv_port)
 {
     redisContext* ctx; 
     redisReply* reply;    
@@ -310,7 +309,7 @@ void init(void)
     stats.starttime = localtime(&stats.startepoch);
     assert(stats.starttime);
 
-    wtap_init();
+    wtap_init(FALSE);
 
     /* Install signal handler */
     sa.sa_handler = &sig_handler;
@@ -326,9 +325,11 @@ int main(int argc, char* argv[])
     char* redis_server;
     int redis_srv_port; 
     char *namedpipe;
-    pcap_t *pcap;
-    pcap_dumper_t *dumper;
-    
+    FILE *fifo;
+    wtap_dumper *pdh = NULL;
+    wtap_dump_params params = WTAP_DUMP_PARAMS_INIT;
+    int write_err;
+
     init();
     
     namedpipe = calloc(128,1);
@@ -365,33 +366,32 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE; 
     }
 
+    fifo = fopen(namedpipe, "wb");
+    if (fifo == NULL) {
+        fprintf(stderr, "[ERROR]: %d (%s)\n", errno, strerror(errno));
+    }
+
     fprintf(stderr, "[INFO] redis_server = %s\n",redis_server);
     fprintf(stderr, "[INFO] redis_port = %d\n",redis_srv_port);
     fprintf(stderr, "[INFO] named pipe = %s\n", namedpipe);
     fprintf(stderr, "[INFO] pid = %d\n",(int)getpid());
-
-    /* Open the pcap named pipe */
-    pcap = pcap_open_dead(DLT_EN10MB, 65535);
-    if (pcap) {
-        printf("[INFO] Waiting for other peer (IDS, tcp-reassembly engine, etc)...\n");
-        dumper = pcap_dump_open(pcap, namedpipe);
-        if (dumper) {
-            r = process_input_queue(dumper, redis_server, redis_srv_port);
-            if (r == EXIT_FAILURE) {
-                fprintf(stderr,"[ERROR] Something went wrong in during processing");
-            }else{
-                fprintf(stderr,"[INFO] All went fine. No files in the pipe to process.\n");
-            }
-            /* In all case close the connection */
-            pcap_dump_close(dumper);
-            return r;
-        }else {
-            fprintf(stderr,"[ERROR] pcap dumper failed\n");
+    
+    params.encap =  WTAP_ENCAP_ETHERNET;
+    pdh = wtap_dump_fdopen(fileno(fifo), WTAP_FILE_TYPE_SUBTYPE_PCAPNG, WTAP_UNCOMPRESSED, &params, &write_err);
+    if (pdh != NULL){
+        r = process_input_queue(pdh, redis_server, redis_srv_port);
+        if (r == EXIT_FAILURE) {
+            fprintf(stderr,"[ERROR] Something went wrong in during processing");
+        }else{
+            fprintf(stderr,"[INFO] All went fine. No files in the pipe to process.\n");
         }
-        pcap_close(pcap);
-    }else {
-        fprintf(stderr, "[ERROR] pcap_open_dead failed\n");
+        wtap_dump_close(pdh, &write_err);
+        wtap_dump_params_cleanup(&params);
+        return r;
+    }else{
+        fprintf(stderr, "[ERROR]: wtap_dump_fdopen %d (%s)\n", write_err, strerror(write_err));
     }
     return EXIT_FAILURE;
+    wtap_dump_close(pdh, &write_err);
+    wtap_dump_params_cleanup(&params);
 }
-
