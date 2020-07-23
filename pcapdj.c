@@ -64,11 +64,12 @@ statistics_t stats;
 void usage(void)
 {
     
-    printf("pcapdj [-h] -b namedpipe [-s redis_server] -p [redis_srv_port]\n\n");
+    printf("pcapdj [-h] -b namedpipe [-s redis_server] -p [redis_srv_port] [-q redis_queue]\n\n");
     printf("Connects to the redis instance specified with by the redis_server\n");
     printf("and redis_srv_port.\n\n"); 
 
-    printf("Read a list of pcap-ng files from the  queue PCAPDJ_IN_QUEUE.\n");
+    printf("Read a list of pcap-ng files from the queue PCAPDJ_IN_QUEUE by default\n");
+    printf("or the queue specified with the -q flag is set.\n");
     printf("Open the pcap-ng file and feed each packet to the fifo buffer\n"); 
     printf("specified by with the -b option.  When a pcap file from the list\n"); 
     printf("has been transferred to the buffer update the queue PCAPDJ_PROCESSED\n");
@@ -176,11 +177,11 @@ void delete_next_file_queue(redisContext* ctx)
 }
 
 
-void delete_auth_file(redisContext* ctx)
+void delete_auth_file(redisContext* ctx, char* filename)
 {
     /* FIXME errors are ignored */
     redisReply * reply;
-    reply = redisCommand(ctx, "DEL %s", AKEY);
+    reply = redisCommand(ctx, "SREM %s %s", AKEY, filename);
     if (reply)
         freeReplyObject(reply);
 }
@@ -192,20 +193,15 @@ void wait_auth_to_proceed(redisContext* ctx, char* filename)
     /* If there is an error the program waits forever */
     
     do {
-        reply = redisCommand(ctx,"GET %s",AKEY);
+        reply = redisCommand(ctx,"SISMEMBER %s %s",AKEY, filename);
         if (reply){
-            if (reply->type == REDIS_REPLY_STRING) {
-                /* Delete the authorized key. So in the next
-                 * iteration the AUTH_KEY is not there anymore and
-                 * the error message is not reated all the times
-                 */
-                delete_auth_file(ctx);
-                if (!strncmp(reply->str, filename, strlen(filename))) {
+            if (reply->type == REDIS_REPLY_INTEGER) {
+                /* Delete the filename from the set if found */
+                if (reply->integer == 1){
+                    delete_auth_file(ctx, filename);
                     fprintf(stderr, "[INFO] Got authorization to process %s\n",filename);
                     freeReplyObject(reply);
                     return;
-                }else{
-                    fprintf(stderr,"[ERROR] Got the wrong authorization. Waited for (%s). Got %s.\n", filename, reply->str);
                 }
             }       
             freeReplyObject(reply);
@@ -257,7 +253,7 @@ void process_file(redisContext* ctx, wtap_dumper* dumper, char* filename)
     }
 }
 
-int process_input_queue(wtap_dumper *dumper, char* redis_server, int redis_srv_port)
+int process_input_queue(wtap_dumper *dumper, char* redis_server, int redis_srv_port, char* redis_queue)
 {
     redisContext* ctx; 
     redisReply* reply;    
@@ -268,10 +264,9 @@ int process_input_queue(wtap_dumper *dumper, char* redis_server, int redis_srv_p
         fprintf(stderr,"[ERROR] Could not connect to redis. %s.\n", ctx->errstr);
         return EXIT_FAILURE;
     }
-    
 
     do {
-        reply = redisCommand(ctx,"LPOP %s", PQUEUE); 
+        reply = redisCommand(ctx,"LPOP %s", redis_queue); 
         if (!reply){
             fprintf(stderr,"[ERROR] Redis error %s\n",ctx->errstr);
             return EXIT_FAILURE;
@@ -320,35 +315,39 @@ void init(void)
 int main(int argc, char* argv[])
 {
 
-    int opt;
-    int r;
+    int opt, r, redis_srv_port, write_err;
     char* redis_server;
-    int redis_srv_port; 
-    char *namedpipe;
+    char* namedpipe;
+    char* redis_queue;
     FILE *fifo;
     wtap_dumper *pdh = NULL;
     wtap_dump_params params = WTAP_DUMP_PARAMS_INIT;
-    int write_err;
 
     init();
     
     namedpipe = calloc(128,1);
     assert(namedpipe);  
-    
+
+    redis_queue = calloc(128,1);
+    assert(redis_queue);  
+
     redis_server = calloc(64,1);
     assert(redis_server);
 
     redis_srv_port = 6379;        
-    while ((opt = getopt(argc, argv, "b:hs:p:")) != -1) {
+    while ((opt = getopt(argc, argv, "b:hs:p:q:")) != -1) {
         switch (opt) {
             case 's':
-                strncpy(redis_server,optarg,64);
+                strncpy(redis_server, optarg, 64);
                 break;
             case 'p':
                 redis_srv_port = atoi(optarg);
                 break;
             case 'b':
                 strncpy(namedpipe , optarg, 128);
+                break;
+            case 'q':
+                strncpy(redis_queue , optarg, 128);
                 break;
             case 'h':
                 usage();
@@ -365,6 +364,8 @@ int main(int argc, char* argv[])
         fprintf(stderr,"[ERROR] A named pipe must be specified\n");
         return EXIT_FAILURE; 
     }
+    if (!redis_queue[0])
+        strncpy(redis_queue,PQUEUE,128);
 
     fifo = fopen(namedpipe, "wb");
     if (fifo == NULL) {
@@ -373,13 +374,14 @@ int main(int argc, char* argv[])
 
     fprintf(stderr, "[INFO] redis_server = %s\n",redis_server);
     fprintf(stderr, "[INFO] redis_port = %d\n",redis_srv_port);
+    fprintf(stderr, "[INFO] redis_queue = %s\n", redis_queue);
     fprintf(stderr, "[INFO] named pipe = %s\n", namedpipe);
     fprintf(stderr, "[INFO] pid = %d\n",(int)getpid());
     
     params.encap =  WTAP_ENCAP_ETHERNET;
     pdh = wtap_dump_fdopen(fileno(fifo), WTAP_FILE_TYPE_SUBTYPE_PCAPNG, WTAP_UNCOMPRESSED, &params, &write_err);
     if (pdh != NULL){
-        r = process_input_queue(pdh, redis_server, redis_srv_port);
+        r = process_input_queue(pdh, redis_server, redis_srv_port, redis_queue);
         if (r == EXIT_FAILURE) {
             fprintf(stderr,"[ERROR] Something went wrong in during processing");
         }else{

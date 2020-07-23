@@ -66,6 +66,8 @@ files.sort()
 for rf in files:
     f = root + "/"+rf
     if f.endswith('pcap') == True:
+    # Compressed files are supported too
+    # if f.endswith('pcap.gz') == True:
         red.rpush("PCAPDJ_IN_QUEUE",f)
 ```
 
@@ -91,11 +93,11 @@ suricata -r /tmp/pcapbuffer
 ```
 
 Until now no packets are put in the buffer because pcapdj needs an
-authorization. PCAPDJ says that it is ready to process the pcapfile 1.pcap
-and that it waits for this authorization.  For doing so, pcapdj puts the
-next file it wants to process in a queue called PCAPDJ_NEXT and it polls the
-key PCAPDJ_AUTH. The value of PCAPDJ_AUTH must correspond to the file pcapdj 
-put previously in the queue PCAPDJ_NEXT.
+authorization. PCAPDJ says that it is ready to process the pcapfile 1.pcap and
+that it waits for this authorization.  For doing so, pcapdj puts the next file
+it wants to process in a queue called PCAPDJ_NEXT and it searches for the given
+filename in the PCAPDJ_AUTH set. This way several pcadj processes can be managed
+by the same authorization script. 
 
 ```
 [INFO] Next file to process /tmp/testpcaps/1.pcap
@@ -111,7 +113,7 @@ while True:
     pcapname = red.lpop("PCAPDJ_NEXT")
     if pcapname != None:
         print "Authorized file ",pcapname
-        red.set("PCAPDJ_AUTH", pcapname)
+        red.sadd("PCAPDJ_AUTH", pcapname)
 ```
 
 Wait until pcapdj and suricata are done
